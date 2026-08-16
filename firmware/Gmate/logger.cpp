@@ -5,8 +5,10 @@
 #include <SensorQMI8658.hpp>
 #include <Wire.h>
 #include <esp_timer.h>
+#include <time.h>
 
 #include "config.h"
+#include "gnss.h"
 
 namespace {
 
@@ -39,6 +41,8 @@ uint16_t g_partIndex = 0;
 uint64_t g_bytesInFile = 0;
 int64_t g_startUs = 0;
 int64_t g_lastFlushMs = 0;
+uint32_t g_lastClockSyncMs = 0;
+bool g_clockSynced = false;
 
 // Innan nagon rad skrivits har vi ingen uppmatt radlangd. Det har ar en
 // rimlig gissning for formatet nedan och ersatts av det verkliga vardet sa
@@ -144,8 +148,12 @@ bool openNextPart() {
   g_bytesInFile = 0;
 
   // Rubrikrad, sa att filen gar att oppna direkt i Excel eller liknande.
+  // Sitter en GPS inkopplad far filen fyra extra kolumner.
   const char *header =
-      "tid_s,klocka,ax_g,ay_g,az_g,a_tot_g,gx_dps,gy_dps,gz_dps,temp_c\n";
+      gnss::present()
+          ? "tid_s,klocka,ax_g,ay_g,az_g,a_tot_g,gx_dps,gy_dps,gz_dps,temp_c,"
+            "lat,lon,alt_m,hast_kmh,satelliter,fix\n"
+          : "tid_s,klocka,ax_g,ay_g,az_g,a_tot_g,gx_dps,gy_dps,gz_dps,temp_c\n";
   g_file.write((const uint8_t *)header, strlen(header));
   g_bytesInFile += strlen(header);
 
@@ -208,12 +216,27 @@ void writeRow(const Sample &s) {
              (unsigned)dt.getHour(), (unsigned)dt.getMinute(), (unsigned)dt.getSecond());
   }
 
-  char row[160];
+  char gpsPart[80] = "";
+  if (gnss::present()) {
+    const GnssFix f = gnss::fix();
+    if (f.valid) {
+      snprintf(gpsPart, sizeof(gpsPart), ",%.7f,%.7f,%.1f,%.2f,%u,%u", f.lat,
+               f.lon, f.altM, f.speedKmh, (unsigned)f.sats,
+               (unsigned)f.fixType);
+    } else {
+      // Utan position lamnas kolumnerna tomma. Att skriva nollor hade sett ut
+      // som en giltig position i Atlanten utanfor Ghana.
+      snprintf(gpsPart, sizeof(gpsPart), ",,,,,%u,%u", (unsigned)f.sats,
+               (unsigned)f.fixType);
+    }
+  }
+
+  char row[256];
   const int len = snprintf(
       row, sizeof(row),
-      "%lu.%03lu,%s,%.4f,%.4f,%.4f,%.4f,%.2f,%.2f,%.2f,%.1f\n",
+      "%lu.%03lu,%s,%.4f,%.4f,%.4f,%.4f,%.2f,%.2f,%.2f,%.1f%s\n",
       (unsigned long)sec, (unsigned long)ms, clock, s.ax, s.ay, s.az, s.atot,
-      s.gx, s.gy, s.gz, s.temp);
+      s.gx, s.gy, s.gz, s.temp, gpsPart);
   if (len <= 0) return;
 
   if (g_bufLen + (size_t)len > sizeof(g_buf)) flushBuffer();
@@ -232,6 +255,46 @@ void writeRow(const Sample &s) {
     if (g_status.bytesPerRow == 0) g_status.bytesPerRow = kAssumedBytesPerRow;
   }
   unlock();
+}
+
+// Satellittid ar exakt till sekunden. Nar GPS:en vet vad klockan ar stalls
+// kortets egen klocka efter den - forst sa fort ett fix finns, sedan en gang
+// i timmen for att motverka drift under langa loggningar.
+void syncClockFromGnss() {
+  if (!g_rtcOk || !gnss::present() || !gnss::timeValid()) return;
+
+  const uint32_t now = millis();
+  if (g_clockSynced && (now - g_lastClockSyncMs) < 3600000UL) return;
+
+  uint16_t year;
+  uint8_t month, day, hour, minute, second;
+  gnss::utc(year, month, day, hour, minute, second);
+  if (year < 2024) return;
+
+  // GPS levererar UTC. Vill man ha lokal tid i loggen andras offseten i
+  // config.h; omrakningen gar via unix-tid sa att dygns- och manadsbyten
+  // hanteras ratt.
+  struct tm t = {};
+  t.tm_year = (int)year - 1900;
+  t.tm_mon = (int)month - 1;
+  t.tm_mday = day;
+  t.tm_hour = hour;
+  t.tm_min = minute;
+  t.tm_sec = second;
+
+  time_t stamp = mktime(&t);
+  if (stamp == (time_t)-1) return;
+  stamp += (time_t)GNSS_UTC_OFFSET_MINUTES * 60;
+
+  struct tm out;
+  if (gmtime_r(&stamp, &out) == nullptr) return;
+
+  rtc.setDateTime(RTC_DateTime((uint16_t)(out.tm_year + 1900),
+                               (uint8_t)(out.tm_mon + 1), (uint8_t)out.tm_mday,
+                               (uint8_t)out.tm_hour, (uint8_t)out.tm_min,
+                               (uint8_t)out.tm_sec));
+  g_lastClockSyncMs = now;
+  g_clockSynced = true;
 }
 
 void samplerTask(void *) {
@@ -253,6 +316,9 @@ void samplerTask(void *) {
     } else if (!g_wantLogging && g_isLogging) {
       stopLogging();
     }
+
+    gnss::poll();
+    syncClockFromGnss();
 
     Sample s = {};
     if (g_imuOk) {
@@ -314,6 +380,10 @@ bool begin() {
     g_imuOk = imu.begin(Wire, QMI8658_H_SLAVE_ADDRESS, PIN_I2C_SDA, PIN_I2C_SCL);
   }
   if (g_imuOk) applySensorConfig();
+
+  // Valfri GPS. Finns ingen ar det inte ett fel - loggen far bara farre
+  // kolumner.
+  gnss::begin();
 
   g_rtcOk = rtc.begin(Wire, PIN_I2C_SDA, PIN_I2C_SCL);
   if (g_rtcOk) {

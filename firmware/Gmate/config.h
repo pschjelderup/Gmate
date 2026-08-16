@@ -40,6 +40,16 @@
 // sa vi lasar av pekskarmen med pollning i stallet.
 #define TOUCH_IRQ_NOT_CONNECTED -1
 
+// Valfri u-blox GPS pa samma i2c-buss. Adressen krockar inte med nagot
+// ombord: rorelsesensorn ligger pa 0x6B, pekskarmen 0x38, klockan 0x51 och
+// io-expandern 0x20.
+#define GNSS_I2C_ADDR 0x42
+
+// GPS ger tiden i UTC. Noll betyder att loggen skrivs i UTC, vilket ar
+// entydigt aret om. Vill du hellre ha svensk tid: 60 pa vintern, 120 pa
+// sommaren. Sommartiden byts inte om automatiskt.
+#define GNSS_UTC_OFFSET_MINUTES 0
+
 // Om pekningarna hamnar fel: satt dessa till 1 for att spegla respektive axel.
 #define TOUCH_FLIP_X 0
 #define TOUCH_FLIP_Y 0

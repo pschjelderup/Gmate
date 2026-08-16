@@ -1,6 +1,7 @@
 #include "ui.h"
 
 #include "config.h"
+#include "gnss.h"
 
 namespace {
 
@@ -159,8 +160,21 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
   }
 
   // Liten prick som visar om minneskortet sitter i.
-  gfx->fillCircle(434 - 0, 52, 6, st.sdMounted ? C_GREEN : C_RED);
+  gfx->fillCircle(434, 52, 6, st.sdMounted ? C_GREEN : C_RED);
   printRight(414, 46, 2, C_DIM, st.sdMounted ? "kort OK" : "inget kort");
+
+  // GPS visas bara nar en mottagare faktiskt sitter inkopplad.
+  if (gnss::present()) {
+    const GnssFix f = gnss::fix();
+    if (f.valid) {
+      snprintf(buf, sizeof(buf), "GPS %u sat  %.0f km/h", (unsigned)f.sats,
+               f.speedKmh);
+      printAt(16, 46, 2, C_GREEN, buf);
+    } else {
+      snprintf(buf, sizeof(buf), "GPS söker (%u sat)", (unsigned)f.sats);
+      printAt(16, 46, 2, C_DIM, buf);
+    }
+  }
 
   // ------------------------------------------------- levande matvarden ----
   const Rect live = {16, 74, 418, 172};

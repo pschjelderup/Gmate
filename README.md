@@ -18,6 +18,7 @@ löpande besked om hur mycket som loggats och hur länge utrymmet räcker.
 | microSD-kort | 8–128 GB. Formaterat som **FAT32** eller **exFAT** |
 | USB-C-kabel | Måste klara **data**. Många kablar är rena laddkablar och fungerar inte |
 | Strömkälla | Bara för långa loggningar – se [Ström och värme](#ström-och-värme) |
+| u-blox-GPS | **Valfritt.** Ger position, hastighet och exakt klocka – se [GPS](#gps-valfritt) |
 
 ---
 
@@ -111,6 +112,9 @@ Varje fil börjar med en rubrikrad och innehåller sedan en rad per mätning:
 | `gx_dps`, `gy_dps`, `gz_dps` | Vridhastighet per axel, i grader per sekund |
 | `temp_c` | Sensorns temperatur, i grader Celsius |
 
+Sitter en GPS inkopplad tillkommer sex kolumner: `lat`, `lon`, `alt_m`,
+`hast_kmh`, `satelliter` och `fix`. Se [GPS](#gps-valfritt).
+
 I stillhet visar `a_tot_g` ungefär **1,00** – det är jordens dragningskraft, och
 den är alltid med.
 
@@ -122,8 +126,8 @@ alltså som mest de senaste fem sekunderna, aldrig hela filen.
 Kortet har en egen klocka med backup, men den vet inte vad den är för tid när
 den är ny. Första gången firmware startar ställs den till den tidpunkt då
 firmware byggdes, vilket ligger nära nog för att loggarna ska gå att sortera och
-hitta i efterhand. Vill du ha sekundexakt tid går det att koppla in en GPS – se
-[Idéer att bygga vidare på](#idéer-att-bygga-vidare-på).
+hitta i efterhand. Vill du ha sekundexakt tid: koppla in en GPS, så ställs
+klockan efter satellittid automatiskt – se [GPS](#gps-valfritt).
 
 ---
 
@@ -182,11 +186,50 @@ med en USB-mätare på din egen uppsättning innan du litar på en tvåveckorsk�
 
 ---
 
+## GPS (valfritt)
+
+Kopplar du in en u-blox-GPS – till exempel SparkFun NEO-M9N – på I2C-kontakten
+hittas den automatiskt vid start. Sitter ingen GPS inkopplad fungerar allt
+precis som vanligt, loggen får bara färre kolumner. Du behöver alltså inte byta
+firmware fram och tillbaka.
+
+Med GPS inkopplad:
+
+- Loggen får **position, höjd och hastighet** på varje rad. Det är det som gör
+  g-krafterna tolkbara i efterhand – man ser vad som faktiskt hände.
+- **Klockan blir sekundexakt.** Kortets egen klocka ställs efter satellittid så
+  fort mottagaren fått fix, och sedan en gång i timmen för att motverka drift.
+- Skärmen visar antal satelliter och aktuell hastighet.
+
+Innan mottagaren har fått fix lämnas positionskolumnerna **tomma**. De fylls
+inte med nollor, eftersom 0,0 är en giltig position i Atlanten och hade sett ut
+som riktiga mätvärden.
+
+> ### Kontrollera kontakten innan du kopplar in
+>
+> Qwiic-standarden är **GND, 3V3, SDA, SCL**. Waveshare använder samma fysiska
+> kontakt (JST SH 1,0 mm, 4-polig) men jag har inte kunnat verifiera att
+> ordningen är densamma på just det här kortet – deras dokumentation gick inte
+> att nå. **Mät med multimeter eller läs texten på kortet först.** Kopplar du in
+> den bakvänd kan GPS-modulen ta skada.
+
+Två saker att veta:
+
+- **Tiden loggas i UTC**, vilket är entydigt året om. Vill du hellre ha svensk
+  tid: ändra `GNSS_UTC_OFFSET_MINUTES` i `firmware/Gmate/config.h` till `60`
+  (vintertid) eller `120` (sommartid). Sommartiden byts inte om automatiskt.
+- **GPS:en drar ström** – ungefär 30 mA kontinuerligt, vilket är i samma
+  storleksordning som resten av kortet med skärmen släckt. Räkna med att
+  ungefär fördubbla strömbudgeten för en tvåveckorskörning.
+
+GPS:en läses av en gång i sekunden oavsett loggfrekvens, eftersom mottagaren
+inte uppdaterar oftare än så. Vid högre loggfrekvenser upprepas alltså samma
+position på flera rader, medan g-krafterna är färska på varje rad.
+
+---
+
 ## Idéer att bygga vidare på
 
-- **GPS för exakt tid och hastighet.** En u-blox NEO-M9N över I2C ger sekundexakt
-  tid från satellit, plus position och hastighet – vilket gör g-krafterna
-  betydligt mer meningsfulla, eftersom man ser vad som hände.
 - **Nollställning.** En knapp som drar bort den rådande lutningen, så att
   loggen visar avvikelse i stället för absolut riktning.
 - **Toppvärden.** Högsta uppmätta g sedan start, kvar på skärmen.
@@ -203,7 +246,7 @@ Bygga lokalt:
 
 ```bash
 arduino-cli core install esp32:esp32
-arduino-cli lib install "GFX Library for Arduino" "SensorLib"
+arduino-cli lib install "GFX Library for Arduino" "SensorLib" "SparkFun u-blox GNSS v3"
 arduino-cli compile \
   --fqbn esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,FlashMode=qio,PartitionScheme=huge_app,CDCOnBoot=cdc \
   firmware/Gmate
