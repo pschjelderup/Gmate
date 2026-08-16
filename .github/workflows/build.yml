@@ -83,13 +83,17 @@ jobs:
           sed "s/__VERSION__/$VERSION/g" web/manifest.json > site/manifest.json
           cat site/manifest.json
 
-      - name: Spara filerna som nedladdningsbara artefakter
+      - name: Spara firmware som nedladdningsbar artefakt
+        # Ett fullt lagringsutrymme for artefakter ar ett kontoproblem, inte
+        # ett fel i koden. Bygget ska inte rapporteras som trasigt for det -
+        # flashsidan hamtar sin fil harifran och den byggdes klart.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: gmate-firmware
-          path: |
-            site/gmate-merged.bin
-            build/Gmate.ino.bin
+          path: site/gmate-merged.bin
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Paketera flashsidan
         if: github.ref == 'refs/heads/main'
