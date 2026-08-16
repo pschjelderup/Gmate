@@ -67,12 +67,60 @@ Mitt på skärmen sitter den stora knappen:
 - **SÄTT I KORT** – grå knapp som betyder att inget minneskort hittades. Sätt i
   ett kort och tryck på knappen, så letar den igen.
 
+Under den sitter **spårknappen** – se [Spårloggning](#spårloggning).
+
 Längst ned står hur det går:
 
 - När den står stilla: hur mycket ledigt utrymme kortet har, vald frekvens och
   hur länge utrymmet räcker.
 - När den loggar: hur länge den hållit på, antal rader, hur många megabyte som
   skrivits, vilken fil som skrivs, och hur länge utrymmet räcker till.
+- När ett spår loggar tar spåret över tredje raden och visar sträcka och antal
+  punkter, eftersom det är det man vill följa då.
+
+Uppe i hörnen sitter två lägesprickar: **minneskortet** till höger och **GPS**
+till vänster.
+
+| GPS-prick | Betyder |
+|---|---|
+| Grå, "ingen GPS" | Ingen mottagare inkopplad |
+| Gul, "GPS söker" | Mottagaren är inkopplad men har ännu ingen position |
+| Grön, "GPS 9 sat" | Position låst, antal satelliter visas |
+
+Skillnaden mellan grå och gul är den viktiga: grå betyder att kabeln eller
+modulen inte fungerar, gul att allt är rätt inkopplat och att det bara är att
+vänta.
+
+### Spårloggning
+
+Spåret är din färdväg över tid – samma sak som spårloggen i en plotter. Det är
+en **egen loggning vid sidan av g-kraftsloggen**: de startas och stoppas var för
+sig och kan mycket väl köra samtidigt. G-krafterna beskriver vad som hände,
+spåret var det hände.
+
+- **STARTA SPÅR** – börjar spara positionen. Knappen blir röd och byter till
+  **STOPPA SPÅR**.
+- **SPÅR: INGEN GPS** – grå och avstängd. Utan mottagare finns ingen position
+  att spara, så knappen lovar inget den inte kan hålla.
+
+Spåret sparas i två filer i mappen `GMATE/SPAR`:
+
+| Fil | Vad du gör med den |
+|---|---|
+| `T0001.GPX` | Dra in den i Google Earth, OpenCPN, Garmin BaseCamp eller vilken sjökortsapp som helst – färdvägen ritas ut på kartan |
+| `T0001.CSV` | Samma punkter som siffror: tid, position, höjd, fart, kurs, satelliter och sträcka. Öppnas i Excel |
+
+**Hur ofta sparas en punkt?** Inte blint varje sekund – det ger tusentals
+identiska punkter så fort du ligger stilla, och GPS-bruset ritar ett garnnystan
+där båten faktiskt låg still. I stället sparas en punkt när du flyttat dig minst
+**5 meter**, dock aldrig tätare än var **2:a sekund**. Ligger du stilla sparas
+ändå en punkt varje **minut**, så att uppehållet syns i spåret i stället för att
+försvinna. Siffrorna går att ändra överst i `firmware/Gmate/config.h`.
+
+GPX-filen skrivs så att den **alltid går att öppna**, även om strömmen försvinner
+mitt i ett spår. Filen avslutas korrekt var trettionde sekund och nästa punkt
+skriver över avslutningen. Vid ett strömavbrott förlorar du alltså som mest en
+halv minut av spåret, aldrig hela filen.
 
 ### Menyn
 

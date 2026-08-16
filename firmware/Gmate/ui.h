@@ -31,6 +31,7 @@ namespace ui {
 
 // Knappytor pa huvudskarmen.
 extern const Rect kBtnStartStop;
+extern const Rect kBtnTrack;
 extern const Rect kBtnSettings;
 extern const Rect kBtnScreenOff;
 

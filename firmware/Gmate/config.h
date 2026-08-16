@@ -65,6 +65,23 @@
 // BOOT-knappen. Anvands som skarm av/pa under loggning.
 #define PIN_BOOT_BUTTON 0
 
+// ------------------------------------------------------------ sparlogg ----
+#define TRACK_DIR "/GMATE/SPAR"
+
+// Tatast mojliga avstand mellan tva sparpunkter, i sekunder. Halls aven nar
+// baten gar fort.
+#define TRACK_MIN_INTERVAL_S 2
+
+// En punkt sparas forst nar farkosten flyttat sig sa har manga meter. Utan den
+// regeln fylls sparet med tusentals identiska punkter sa fort man ligger still,
+// och gps-bruset ritar ett garnnystan dar baten faktiskt lag stilla.
+#define TRACK_MIN_MOVE_M 5.0
+
+// ... men en punkt sparas anda sa har ofta, aven vid stillaliggande. Det ar sa
+// man i efterhand ser att man lag kvar i viken i tre timmar, i stallet for att
+// sparet ser ut att hoppa direkt vidare.
+#define TRACK_MAX_INTERVAL_S 60
+
 // ------------------------------------------------------------- loggning ----
 #define LOG_DIR "/GMATE"
 

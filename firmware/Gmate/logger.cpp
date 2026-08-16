@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "gnss.h"
+#include "track.h"
 
 namespace {
 
@@ -320,6 +321,11 @@ void samplerTask(void *) {
     gnss::poll();
     syncClockFromGnss();
 
+    // Sparloggen skriver fran samma trad som g-kraftsloggen. Da kan de tva
+    // aldrig rora minneskortet samtidigt, och all filhantering sker pa ett
+    // enda stalle.
+    track::tick();
+
     Sample s = {};
     if (g_imuOk) {
       imu.getAccelerometer(s.ax, s.ay, s.az);
@@ -382,8 +388,9 @@ bool begin() {
   if (g_imuOk) applySensorConfig();
 
   // Valfri GPS. Finns ingen ar det inte ett fel - loggen far bara farre
-  // kolumner.
+  // kolumner, och sparloggningen gar inte att starta.
   gnss::begin();
+  track::begin();
 
   g_rtcOk = rtc.begin(Wire, PIN_I2C_SDA, PIN_I2C_SCL);
   if (g_rtcOk) {

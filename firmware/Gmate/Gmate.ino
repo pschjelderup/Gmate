@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "logger.h"
+#include "track.h"
 #include "ui.h"
 
 // ------------------------------------------------------------- skarmen ----
@@ -116,6 +117,17 @@ void onPressMain(int16_t x, int16_t y) {
       logger::start();
     } else {
       logger::remount();
+    }
+    return;
+  }
+
+  if (ui::kBtnTrack.contains(x, y)) {
+    // Sparet gar att starta och stoppa oberoende av g-kraftsloggen. De tva
+    // svarar pa olika fragor och behover inte folja varandra.
+    if (track::isLogging()) {
+      track::stop();
+    } else {
+      track::start();
     }
     return;
   }

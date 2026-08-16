@@ -67,6 +67,7 @@ void poll() {
   g_fix.lon = (double)gps.getLongitude() / 10000000.0;
   g_fix.altM = (float)gps.getAltitudeMSL() / 1000.0f;
   g_fix.speedKmh = (float)gps.getGroundSpeed() * 0.0036f;  // mm/s till km/h
+  g_fix.courseDeg = (float)gps.getHeading() / 100000.0f;   // grader * 1e5
   g_fix.valid = g_fix.fixType >= 2;
 
   g_timeValid = gps.getTimeValid() && gps.getDateValid();
