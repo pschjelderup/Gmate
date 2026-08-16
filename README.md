@@ -33,10 +33,23 @@ löpande besked om hur mycket som loggats och hur länge utrymmet räcker.
 Hittar datorn ingen port: håll inne **BOOT**, tryck och släpp **RESET**, släpp
 sedan BOOT. Då lägger sig kortet i ett läge där det alltid går att flasha.
 
-> Flashsidan blir tillgänglig först när GitHub Pages är påslaget för det här
-> förrådet: **Settings → Pages → Source: GitHub Actions**. Fram tills dess går
-> filen att hämta manuellt under fliken **Actions**, i senaste körningen under
-> *Artifacts*.
+### Engångsinställning innan flashsidan fungerar
+
+Flashsidan ligger på GitHub Pages, och det behöver slås på en gång:
+
+1. **Settings → General**, längst ned: **Change repository visibility → Public**.
+   (Pages är gratis för publika förråd men kostar för privata. Koden är en
+   g-kraftslogger, det finns inget känsligt i den.)
+2. **Settings → Pages → Source: GitHub Actions**.
+3. Slå ihop grenen till `main`. Bygget publicerar då sidan automatiskt.
+
+Därefter ligger flashsidan kvar och uppdateras av sig själv vid varje ändring.
+
+> Vill du hellre behålla förrådet privat går det att hämta filen manuellt under
+> fliken **Actions** → senaste körningen → *Artifacts*, och flasha den med
+> [Espressifs webbflashare](https://espressif.github.io/esptool-js/). Filen ska
+> då skrivas till adress `0x0`. Det kräver att kontots artefaktlagring inte är
+> full.
 
 ---
 
