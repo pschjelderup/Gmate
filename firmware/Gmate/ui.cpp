@@ -153,8 +153,9 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
 
   // ------------------------------------------------------------ rubrik ----
   printAt(16, 14, 3, C_TEXT, "G-LOGGER");
-  if (clock.length() > 0) {
-    printRight(434, 18, 2, C_DIM, clock.c_str() + 11);  // bara HH:MM:SS
+  // Klocksträngen ar "2026-08-16 18:30:05"; vi visar bara tiden.
+  if (clock.length() >= 19) {
+    printRight(434, 18, 2, C_DIM, clock.c_str() + 11);
   }
 
   // Liten prick som visar om minneskortet sitter i.

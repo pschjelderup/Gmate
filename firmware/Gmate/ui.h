@@ -18,7 +18,7 @@ struct AppSettings {
 
 enum Screen { SCREEN_MAIN, SCREEN_SETTINGS };
 
-// En rrutan pa skarmen, anvands bade for att rita knappar och for att avgora
+// En ruta pa skarmen. Anvands bade for att rita knappar och for att avgora
 // var anvandaren tryckte.
 struct Rect {
   int16_t x, y, w, h;

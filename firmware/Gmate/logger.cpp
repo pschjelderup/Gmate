@@ -328,7 +328,9 @@ bool begin() {
 
   remount();
 
-  xTaskCreatePinnedToCore(samplerTask, "sampler", 6144, nullptr, 5, nullptr, 0);
+  // Riklig stack: raderna formateras med flyttal, vilket kraver mer utrymme
+  // an man forst tror.
+  xTaskCreatePinnedToCore(samplerTask, "sampler", 8192, nullptr, 5, nullptr, 0);
   return g_imuOk;
 }
 
