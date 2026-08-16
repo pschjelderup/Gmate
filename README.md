@@ -67,7 +67,9 @@ Mitt på skärmen sitter den stora knappen:
 - **SÄTT I KORT** – grå knapp som betyder att inget minneskort hittades. Sätt i
   ett kort och tryck på knappen, så letar den igen.
 
-Under den sitter **spårknappen** – se [Spårloggning](#spårloggning).
+Under den sitter **spårknappen** – se [Spårloggning](#spårloggning) – och under
+den tre småknappar: **MENY**, **ECO** (se
+[ECODRIVE-skärmen](#ecodrive-skärmen)) och **SLÄCK**.
 
 Längst ned står hur det går:
 
@@ -121,6 +123,60 @@ GPX-filen skrivs så att den **alltid går att öppna**, även om strömmen för
 mitt i ett spår. Filen avslutas korrekt var trettionde sekund och nästa punkt
 skriver över avslutningen. Vid ett strömavbrott förlorar du alltså som mest en
 halv minut av spåret, aldrig hela filen.
+
+### ECODRIVE-skärmen
+
+Knappen **ECO** öppnar en skärm som visar hur mjukt du kör, medan du kör. Den är
+gjord för att sitta i bilen och gå att uppfatta i ögonvrån.
+
+Tanken bakom den är enkel: **sparsam körning och mjuk körning är samma sak.**
+Bränsle går åt när farten ändras – vid gaspådrag, inbromsning och kurvtagning –
+och ju häftigare ändringen är, desto mer går åt. Därför går sparsamhet att mäta
+med enbart rörelsesensorn, utan att veta någonting om motorn.
+
+**Bubblan** är ett vattenpass baklänges: den ska stå still i mitten. Ju hårdare
+du kör, desto längre ut vandrar den. Ringarna är 0,1 g var, och färgen följer
+med:
+
+| Färg | Betyder |
+|---|---|
+| Grön | Under 0,15 g – mjukt, så mycket man knappt tänker på |
+| Gul | 0,15–0,30 g – märks i sätet |
+| Röd | Över 0,30 g – passagerarna tittar upp |
+
+Den orange ringen är **högsta värdet sedan nollställning**. Den ligger kvar så
+att du ser hur hårt det blev även när bubblan hunnit tillbaka till mitten.
+
+**Poängen** uppe till höger är 0–100 och lever hela tiden. Den sjunker när du
+går över 0,15 g och återhämtar sig med drygt en poäng per sekund mjuk körning.
+Under siffran står ett omdöme: UTMÄRKT, BRA, OK, HACKIGT eller HÅRT.
+
+**Räknarna** längst ned visar antal hårda moment sedan du nollställde, uppdelat
+i gas, broms och kurva.
+
+**NOLLSTÄLL** nollar poäng, toppvärde och räknare – lämpligt vid varje ny resa.
+**TILLBAKA** går till huvudskärmen. Skärmen släcks aldrig av sig själv i
+eco-läget; den är till för att tittas på.
+
+Poängen räknas **hela tiden**, även när skärmen visar något annat eller är
+släckt. Annars skulle den börja om varje gång du tittade på den.
+
+#### Två saker värda att veta
+
+**Kortet får sitta hur som helst.** Tyngdkraften plockas fram ur mätvärdena och
+räknas bort, så det som blir kvar är den vågräta accelerationen – det som
+faktiskt känns i sätet. En snett monterad enhet visar alltså inte konstant
+utslag. Vid start står det kort "hittar lodlinjen" medan den ställer in sig.
+
+**Gas, broms och kurva avgörs av GPS-farten.** Rörelsesensorn kan aldrig veta
+vilket håll som är framåt utan att du berättar det, men farten vet det oavsett
+hur kortet är vänt. Utan GPS räknas därför alla hårda moment ihop till en enda
+siffra, och skärmen säger rakt ut att uppdelningen inte går att göra – hellre
+det än att visa "hård inbromsning" när du faktiskt svängde.
+
+Trösklarna ligger överst i `firmware/Gmate/config.h` och är satta efter hur det
+känns i bilen. Tycker du att den är för sträng eller för slapp är det de
+värdena du ska ändra.
 
 ### Menyn
 
