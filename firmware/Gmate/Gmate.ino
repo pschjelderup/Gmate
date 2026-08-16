@@ -8,7 +8,7 @@
 #include <Arduino.h>
 #include <Arduino_GFX_Library.h>
 #include <Preferences.h>
-#include <TouchDrvFT6X36.hpp>
+#include <TouchDrv.hpp>
 #include <Wire.h>
 
 #include "config.h"
@@ -173,9 +173,8 @@ void onPressSettings(int16_t x, int16_t y) {
 void handleTouch() {
   if (!touchOk) return;
 
-  int16_t x = 0, y = 0;
-  const uint8_t points = touch.getPoint(&x, &y, 1);
-  const bool pressed = points > 0;
+  const TouchPoints &points = touch.getTouchPoints();
+  const bool pressed = points.hasPoints();
 
   if (pressed && !wasTouched) {
     lastActivityMs = millis();
@@ -185,6 +184,9 @@ void handleTouch() {
       // inte rakar starta eller stoppa loggningen av misstag.
       setScreen(true);
     } else {
+      const TouchPoint &p = points.getPoint(0);
+      int16_t x = (int16_t)p.x;
+      int16_t y = (int16_t)p.y;
       mapTouch(x, y);
       if (screen == SCREEN_MAIN) {
         onPressMain(x, y);

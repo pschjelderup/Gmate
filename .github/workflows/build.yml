@@ -35,8 +35,11 @@ jobs:
             https://espressif.github.io/arduino-esp32/package_esp32_index.json
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
-          arduino-cli lib install "GFX Library for Arduino"
-          arduino-cli lib install "SensorLib"
+          # Versionerna ar last med flit. Ett biblioteksbyte ska vara ett
+          # medvetet beslut, inte nagot som intraffar for att nagon annan
+          # slappte en ny version samma dag som du bygger om.
+          arduino-cli lib install "GFX Library for Arduino"@1.6.7
+          arduino-cli lib install "SensorLib"@0.4.1
           echo "--- installerade versioner ---"
           arduino-cli core list
           arduino-cli lib list

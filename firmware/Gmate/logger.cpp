@@ -204,8 +204,8 @@ void writeRow(const Sample &s) {
   if (g_rtcOk) {
     RTC_DateTime dt = rtc.getDateTime();
     snprintf(clock, sizeof(clock), "%04u-%02u-%02u %02u:%02u:%02u",
-             (unsigned)dt.year, (unsigned)dt.month, (unsigned)dt.day,
-             (unsigned)dt.hour, (unsigned)dt.minute, (unsigned)dt.second);
+             (unsigned)dt.getYear(), (unsigned)dt.getMonth(), (unsigned)dt.getDay(),
+             (unsigned)dt.getHour(), (unsigned)dt.getMinute(), (unsigned)dt.getSecond());
   }
 
   char row[160];
@@ -321,7 +321,7 @@ bool begin() {
     // Da satter vi klockan till tidpunkten firmware byggdes, vilket ligger
     // nara nog for att loggarna ska ga att sortera.
     RTC_DateTime now = rtc.getDateTime();
-    if (now.year < 2024 || now.year > 2099) {
+    if (now.getYear() < 2024 || now.getYear() > 2099) {
       rtc.setDateTime(RTC_DateTime(__DATE__, __TIME__));
     }
   }
@@ -414,9 +414,9 @@ String nowString() {
   if (!g_rtcOk) return String("");
   RTC_DateTime dt = rtc.getDateTime();
   char buf[24];
-  snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u", (unsigned)dt.year,
-           (unsigned)dt.month, (unsigned)dt.day, (unsigned)dt.hour,
-           (unsigned)dt.minute, (unsigned)dt.second);
+  snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u", (unsigned)dt.getYear(),
+           (unsigned)dt.getMonth(), (unsigned)dt.getDay(), (unsigned)dt.getHour(),
+           (unsigned)dt.getMinute(), (unsigned)dt.getSecond());
   return String(buf);
 }
 
