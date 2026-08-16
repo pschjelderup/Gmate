@@ -1,8 +1,12 @@
 name: Bygg firmware
 
 on:
+  # En push till en gren med oppen pull request skulle annars starta tva
+  # identiska byggen - ett for pushen och ett for pull requesten. Grenar
+  # byggs darfor via pull requesten, och main bygger for sig sjalv eftersom
+  # det ar den korningen som publicerar flashsidan.
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
