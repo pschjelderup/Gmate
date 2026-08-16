@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <Arduino_GFX_Library.h>
 
+#include "eco.h"
 #include "logger.h"
 
 // Anvandarens installningar. Sparas i kortets flashminne och overlever
@@ -16,7 +17,7 @@ struct AppSettings {
   uint8_t screenIdx;
 };
 
-enum Screen { SCREEN_MAIN, SCREEN_SETTINGS };
+enum Screen { SCREEN_MAIN, SCREEN_SETTINGS, SCREEN_ECO };
 
 // En ruta pa skarmen. Anvands bade for att rita knappar och for att avgora
 // var anvandaren tryckte.
@@ -33,7 +34,12 @@ namespace ui {
 extern const Rect kBtnStartStop;
 extern const Rect kBtnTrack;
 extern const Rect kBtnSettings;
+extern const Rect kBtnEco;
 extern const Rect kBtnScreenOff;
+
+// Knappytor pa ecodrive-skarmen.
+extern const Rect kBtnEcoReset;
+extern const Rect kBtnEcoBack;
 
 // Knappytor i installningsmenyn. Rad 0-3, minus och plus.
 Rect settingsMinus(uint8_t row);
@@ -45,6 +51,7 @@ void begin(Arduino_Canvas *canvas);
 void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
               const String &clock);
 void drawSettings(const AppSettings &cfg);
+void drawEco(const EcoStatus &e);
 
 // Meddelande over hela skarmen, for fel som anvandaren maste atgarda.
 void drawMessage(const char *title, const char *line1, const char *line2);

@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "config.h"
+#include "eco.h"
 #include "gnss.h"
 #include "track.h"
 
@@ -338,6 +339,10 @@ void samplerTask(void *) {
     g_latest = s;
     unlock();
 
+    // Ecodrive raknar hela tiden, aven nar skarmen visar nagot annat. Annars
+    // skulle poangen borja om varje gang man tittar pa den.
+    eco::tick(s);
+
     if (g_isLogging) {
       writeRow(s);
 
@@ -391,6 +396,7 @@ bool begin() {
   // kolumner, och sparloggningen gar inte att starta.
   gnss::begin();
   track::begin();
+  eco::begin();
 
   g_rtcOk = rtc.begin(Wire, PIN_I2C_SDA, PIN_I2C_SCL);
   if (g_rtcOk) {

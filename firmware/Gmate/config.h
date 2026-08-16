@@ -65,6 +65,30 @@
 // BOOT-knappen. Anvands som skarm av/pa under loggning.
 #define PIN_BOOT_BUTTON 0
 
+// ------------------------------------------------------------ ecodrive ----
+// Granserna ar satta efter hur det kanns i bilen, inte efter vad som ar
+// tekniskt mojligt. 0,15 g ar ungefar sa mycket man kanner utan att tanka pa
+// det; 0,30 g ar en inbromsning som far passagerarna att titta upp.
+#define ECO_SOFT_G 0.15f
+#define ECO_HARD_G 0.30f
+
+// Handelsen raknas som avslutad forst har, sa att ett enda haftigt ryck inte
+// raknas som fem handelser nar vardet studsar kring gransen.
+#define ECO_CLEAR_G 0.20f
+
+// Poang som dras per g over den mjuka gransen och sekund.
+#define ECO_PENALTY_PER_G_S 40.0f
+
+// Poang som ateras per sekunds mjuk korning.
+#define ECO_RECOVERY_PER_S 1.2f
+
+// Vad ytterringen i bubblan motsvarar.
+#define ECO_BUBBLE_FULL_G 0.40f
+
+// Tidskonstant for att hitta tyngdkraften. Langre an alla korrorelser, kortare
+// an en backe.
+#define ECO_GRAVITY_TAU_S 3.0f
+
 // ------------------------------------------------------------ sparlogg ----
 #define TRACK_DIR "/GMATE/SPAR"
 

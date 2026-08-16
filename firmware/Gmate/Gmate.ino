@@ -12,6 +12,7 @@
 #include <Wire.h>
 
 #include "config.h"
+#include "eco.h"
 #include "logger.h"
 #include "track.h"
 #include "ui.h"
@@ -139,10 +140,23 @@ void onPressMain(int16_t x, int16_t y) {
     return;
   }
 
+  if (ui::kBtnEco.contains(x, y)) {
+    screen = SCREEN_ECO;
+    return;
+  }
+
   if (ui::kBtnScreenOff.contains(x, y)) {
     setScreen(false);
     return;
   }
+}
+
+void onPressEco(int16_t x, int16_t y) {
+  if (ui::kBtnEcoReset.contains(x, y)) {
+    eco::reset();
+    return;
+  }
+  if (ui::kBtnEcoBack.contains(x, y)) screen = SCREEN_MAIN;
 }
 
 void onPressSettings(int16_t x, int16_t y) {
@@ -202,6 +216,8 @@ void handleTouch() {
       mapTouch(x, y);
       if (screen == SCREEN_MAIN) {
         onPressMain(x, y);
+      } else if (screen == SCREEN_ECO) {
+        onPressEco(x, y);
       } else {
         onPressSettings(x, y);
       }
@@ -264,8 +280,10 @@ void loop() {
   // Slack skarmen automatiskt under loggning, men bara om anvandaren valt en
   // tid. Nar ingen loggning pagar star skarmen kvar, sa att den aldrig kanns
   // dod nar man star och pillar med den.
+  // Ecodrive-skarmen ar till for att tittas pa medan man kor, sa den slacks
+  // aldrig av sig sjalv.
   const uint16_t timeout = kScreenTimeouts[cfg.screenIdx];
-  if (screenOn && timeout > 0 && logger::isLogging() &&
+  if (screenOn && timeout > 0 && logger::isLogging() && screen != SCREEN_ECO &&
       millis() - lastActivityMs > (uint32_t)timeout * 1000UL) {
     setScreen(false);
   }
@@ -275,6 +293,8 @@ void loop() {
     if (screen == SCREEN_MAIN) {
       ui::drawMain(logger::latest(), logger::status(),
                    logger::estimateSecondsLeft(), logger::nowString());
+    } else if (screen == SCREEN_ECO) {
+      ui::drawEco(eco::status());
     } else {
       ui::drawSettings(cfg);
     }
