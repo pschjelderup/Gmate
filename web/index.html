@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gmate – installera</title>
+    <script
+      type="module"
+      src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
+    ></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0d1117;
+        --panel: #161b22;
+        --text: #e6edf3;
+        --dim: #9aa7b4;
+        --accent: #3c9dff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2rem 1.25rem 4rem;
+        background: var(--bg);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 2rem;
+        margin: 0 0 0.25rem;
+      }
+      .lead {
+        color: var(--dim);
+        margin: 0 0 2rem;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid #26303b;
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      ol {
+        padding-left: 1.25rem;
+      }
+      li {
+        margin-bottom: 0.6rem;
+      }
+      .install {
+        text-align: center;
+        padding: 2rem 1.5rem;
+      }
+      .note {
+        font-size: 0.9rem;
+        color: var(--dim);
+      }
+      code {
+        background: #0b1017;
+        padding: 0.1rem 0.4rem;
+        border-radius: 5px;
+        font-size: 0.9em;
+      }
+      .unsupported {
+        color: #ffb84d;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Gmate</h1>
+      <p class="lead">
+        G-kraftslogger för Waveshare ESP32-S3-Touch-AMOLED-2.41. Installeras
+        direkt från webbläsaren – inget program behöver installeras.
+      </p>
+
+      <div class="card install">
+        <esp-web-install-button manifest="manifest.json">
+          <button slot="activate">Installera Gmate på kortet</button>
+          <span slot="unsupported" class="unsupported">
+            Den här webbläsaren kan inte prata med kortet. Använd Chrome eller
+            Edge på en dator.
+          </span>
+          <span slot="not-allowed" class="unsupported">
+            Sidan måste öppnas över https för att få prata med kortet.
+          </span>
+        </esp-web-install-button>
+      </div>
+
+      <div class="card">
+        <h2>Så gör du</h2>
+        <ol>
+          <li>Anslut kortet till datorn med en USB-C-kabel som klarar data.</li>
+          <li>Klicka på knappen ovan.</li>
+          <li>
+            Välj kortets serieport i listan som dyker upp. Den heter oftast
+            något med <code>USB JTAG</code> eller <code>CH343</code>.
+          </li>
+          <li>Vänta tills det står att installationen är klar.</li>
+        </ol>
+        <p class="note">
+          Hittas ingen port: håll inne <strong>BOOT</strong>-knappen, tryck och
+          släpp <strong>RESET</strong>, släpp sedan BOOT. Då lägger sig kortet i
+          ett läge där det alltid går att flasha. Prova också en annan
+          USB-kabel – många kablar är enbart laddkablar och saknar dataledare.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Efter installationen</h2>
+        <p>
+          Sätt i ett microSD-kort, tryck <strong>STARTA</strong> på skärmen och
+          loggningen är igång. Filerna hamnar i mappen <code>GMATE</code> på
+          kortet och kan öppnas direkt i Excel.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>
