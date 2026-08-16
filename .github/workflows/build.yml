@@ -1,0 +1,118 @@
+name: Bygg firmware
+
+on:
+  # En push till en gren med oppen pull request skulle annars starta tva
+  # identiska byggen - ett for pushen och ett for pull requesten. Grenar
+  # byggs darfor via pull requesten, och main bygger for sig sjalv eftersom
+  # det ar den korningen som publicerar flashsidan.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: bygg-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FQBN: esp32:esp32:esp32s3:PSRAM=opi,FlashSize=16M,FlashMode=qio,PartitionScheme=huge_app,CDCOnBoot=cdc
+  SKETCH: firmware/Gmate
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installera arduino-cli
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Installera ESP32-kort och bibliotek
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          # Versionerna ar last med flit. Ett biblioteksbyte ska vara ett
+          # medvetet beslut, inte nagot som intraffar for att nagon annan
+          # slappte en ny version samma dag som du bygger om.
+          arduino-cli lib install "GFX Library for Arduino"@1.6.7
+          arduino-cli lib install "SensorLib"@0.4.1
+          arduino-cli lib install "SparkFun u-blox GNSS v3"@3.1.14
+          echo "--- installerade versioner ---"
+          arduino-cli core list
+          arduino-cli lib list
+
+      - name: Kompilera
+        run: |
+          arduino-cli compile \
+            --fqbn "$FQBN" \
+            --output-dir build \
+            --warnings default \
+            "$SKETCH"
+          ls -la build
+
+      - name: Sla ihop till en enda flashbar fil
+        run: |
+          python3 -m pip install --quiet esptool
+
+          # boot_app0 ligger i kortpaketet och behovs for att kortet ska
+          # starta ratt app efter flashning.
+          BOOT_APP0=$(find "$HOME/.arduino15/packages/esp32" -name boot_app0.bin | head -1)
+          echo "boot_app0: $BOOT_APP0"
+
+          mkdir -p site
+          python3 -m esptool --chip esp32s3 merge_bin \
+            -o site/gmate-merged.bin \
+            --flash_mode dio \
+            --flash_freq 80m \
+            --flash_size 16MB \
+            0x0 build/Gmate.ino.bootloader.bin \
+            0x8000 build/Gmate.ino.partitions.bin \
+            0xe000 "$BOOT_APP0" \
+            0x10000 build/Gmate.ino.bin
+
+          ls -la site
+
+      - name: Bygg flashsidan
+        run: |
+          cp web/index.html site/index.html
+          VERSION="${GITHUB_SHA::7}"
+          sed "s/__VERSION__/$VERSION/g" web/manifest.json > site/manifest.json
+          cat site/manifest.json
+
+      - name: Spara firmware som nedladdningsbar artefakt
+        # Ett fullt lagringsutrymme for artefakter ar ett kontoproblem, inte
+        # ett fel i koden. Bygget ska inte rapporteras som trasigt for det -
+        # flashsidan hamtar sin fil harifran och den byggdes klart.
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmate-firmware
+          path: site/gmate-merged.bin
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Paketera flashsidan
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publicera:
+    # Lagger flashsidan pa natet sa att firmware kan installeras med ett klick.
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
