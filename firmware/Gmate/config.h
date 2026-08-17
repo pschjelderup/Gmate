@@ -65,6 +65,64 @@
 // BOOT-knappen. Anvands som skarm av/pa under loggning.
 #define PIN_BOOT_BUTTON 0
 
+// ------------------------------------------------------------ ecodrive ----
+// Granserna ar satta efter hur det kanns i bilen, inte efter vad som ar
+// tekniskt mojligt. 0,15 g ar ungefar sa mycket man kanner utan att tanka pa
+// det; 0,30 g ar en inbromsning som far passagerarna att titta upp.
+#define ECO_SOFT_G 0.15f
+#define ECO_HARD_G 0.30f
+
+// Handelsen raknas som avslutad forst har, sa att ett enda haftigt ryck inte
+// raknas som fem handelser nar vardet studsar kring gransen.
+#define ECO_CLEAR_G 0.20f
+
+// Poang som dras per g over den mjuka gransen och sekund.
+#define ECO_PENALTY_PER_G_S 40.0f
+
+// Poang som ateras per sekunds mjuk korning.
+#define ECO_RECOVERY_PER_S 1.2f
+
+// Vad ytterringen i bubblan motsvarar.
+#define ECO_BUBBLE_FULL_G 0.40f
+
+// Tidskonstanter for att hitta tyngdkraften. Den snabba anvands bara tills
+// lodlinjen hittats forsta gangen; darefter tar den langsamma over, sa att en
+// utdragen kurva inte hinner tolkas som "ned".
+#define ECO_GRAVITY_TAU_FAST_S 2.0f
+#define ECO_GRAVITY_TAU_SLOW_S 30.0f
+
+// Under manover uppdateras lodlinjen inte alls. Det ar det som gor att en lang
+// avfart eller rondell far behalla sitt varde i stallet for att sjunka undan.
+#define ECO_FREEZE_MAG_G 0.12f
+#define ECO_FREEZE_LONG_G 0.06f
+
+// Sa mycket maste hanna for att en handelse ska duga till att lara ut vilket
+// hall som ar framat. Under detta ar bruset for stort for att lita pa.
+#define ECO_FWD_MIN_LONG_G 0.08f
+#define ECO_FWD_MIN_MAG_G 0.08f
+
+// Inlarningstakt: snabb precis efter en tara, langsam darefter sa att
+// riktningen inte vandrar av enstaka konstiga handelser.
+#define ECO_FWD_GAIN_FAST 0.20f
+#define ECO_FWD_GAIN_SLOW 0.04f
+
+// ------------------------------------------------------------ sparlogg ----
+#define TRACK_DIR "/GMATE/SPAR"
+
+// Tatast mojliga avstand mellan tva sparpunkter, i sekunder. Halls aven nar
+// baten gar fort.
+#define TRACK_MIN_INTERVAL_S 2
+
+// En punkt sparas forst nar farkosten flyttat sig sa har manga meter. Utan den
+// regeln fylls sparet med tusentals identiska punkter sa fort man ligger still,
+// och gps-bruset ritar ett garnnystan dar baten faktiskt lag stilla.
+#define TRACK_MIN_MOVE_M 5.0
+
+// ... men en punkt sparas anda sa har ofta, aven vid stillaliggande. Det ar sa
+// man i efterhand ser att man lag kvar i viken i tre timmar, i stallet for att
+// sparet ser ut att hoppa direkt vidare.
+#define TRACK_MAX_INTERVAL_S 60
+
 // ------------------------------------------------------------- loggning ----
 #define LOG_DIR "/GMATE"
 

@@ -15,6 +15,7 @@ struct GnssFix {
   double lon;        // grader
   float altM;        // hojd over havet, meter
   float speedKmh;    // hastighet over marken
+  float courseDeg;   // kurs over grund, 0-360 grader
 };
 
 namespace gnss {

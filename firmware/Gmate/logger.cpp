@@ -8,7 +8,9 @@
 #include <time.h>
 
 #include "config.h"
+#include "eco.h"
 #include "gnss.h"
+#include "track.h"
 
 namespace {
 
@@ -320,6 +322,11 @@ void samplerTask(void *) {
     gnss::poll();
     syncClockFromGnss();
 
+    // Sparloggen skriver fran samma trad som g-kraftsloggen. Da kan de tva
+    // aldrig rora minneskortet samtidigt, och all filhantering sker pa ett
+    // enda stalle.
+    track::tick();
+
     Sample s = {};
     if (g_imuOk) {
       imu.getAccelerometer(s.ax, s.ay, s.az);
@@ -331,6 +338,10 @@ void samplerTask(void *) {
     lock();
     g_latest = s;
     unlock();
+
+    // Ecodrive raknar hela tiden, aven nar skarmen visar nagot annat. Annars
+    // skulle poangen borja om varje gang man tittar pa den.
+    eco::tick(s);
 
     if (g_isLogging) {
       writeRow(s);
@@ -382,8 +393,10 @@ bool begin() {
   if (g_imuOk) applySensorConfig();
 
   // Valfri GPS. Finns ingen ar det inte ett fel - loggen far bara farre
-  // kolumner.
+  // kolumner, och sparloggningen gar inte att starta.
   gnss::begin();
+  track::begin();
+  eco::begin();
 
   g_rtcOk = rtc.begin(Wire, PIN_I2C_SDA, PIN_I2C_SCL);
   if (g_rtcOk) {

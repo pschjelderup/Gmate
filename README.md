@@ -67,12 +67,162 @@ Mitt på skärmen sitter den stora knappen:
 - **SÄTT I KORT** – grå knapp som betyder att inget minneskort hittades. Sätt i
   ett kort och tryck på knappen, så letar den igen.
 
+Under den sitter **spårknappen** – se [Spårloggning](#spårloggning) – och under
+den tre småknappar: **MENY**, **ECO** (se
+[ECODRIVE-skärmen](#ecodrive-skärmen)) och **SLÄCK**.
+
 Längst ned står hur det går:
 
 - När den står stilla: hur mycket ledigt utrymme kortet har, vald frekvens och
   hur länge utrymmet räcker.
 - När den loggar: hur länge den hållit på, antal rader, hur många megabyte som
   skrivits, vilken fil som skrivs, och hur länge utrymmet räcker till.
+- När ett spår loggar tar spåret över tredje raden och visar sträcka och antal
+  punkter, eftersom det är det man vill följa då.
+
+Uppe i hörnen sitter två lägesprickar: **minneskortet** till höger och **GPS**
+till vänster.
+
+| GPS-prick | Betyder |
+|---|---|
+| Grå, "ingen GPS" | Ingen mottagare inkopplad |
+| Gul, "GPS söker" | Mottagaren är inkopplad men har ännu ingen position |
+| Grön, "GPS 9 sat" | Position låst, antal satelliter visas |
+
+Skillnaden mellan grå och gul är den viktiga: grå betyder att kabeln eller
+modulen inte fungerar, gul att allt är rätt inkopplat och att det bara är att
+vänta.
+
+### Spårloggning
+
+Spåret är din färdväg över tid – samma sak som spårloggen i en plotter. Det är
+en **egen loggning vid sidan av g-kraftsloggen**: de startas och stoppas var för
+sig och kan mycket väl köra samtidigt. G-krafterna beskriver vad som hände,
+spåret var det hände.
+
+- **STARTA SPÅR** – börjar spara positionen. Knappen blir röd och byter till
+  **STOPPA SPÅR**.
+- **SPÅR: INGEN GPS** – grå och avstängd. Utan mottagare finns ingen position
+  att spara, så knappen lovar inget den inte kan hålla.
+
+Spåret sparas i två filer i mappen `GMATE/SPAR`:
+
+| Fil | Vad du gör med den |
+|---|---|
+| `T0001.GPX` | Dra in den i Google Earth, OpenCPN, Garmin BaseCamp eller vilken sjökortsapp som helst – färdvägen ritas ut på kartan |
+| `T0001.CSV` | Samma punkter som siffror: tid, position, höjd, fart, kurs, satelliter och sträcka. Öppnas i Excel |
+
+**Hur ofta sparas en punkt?** Inte blint varje sekund – det ger tusentals
+identiska punkter så fort du ligger stilla, och GPS-bruset ritar ett garnnystan
+där båten faktiskt låg still. I stället sparas en punkt när du flyttat dig minst
+**5 meter**, dock aldrig tätare än var **2:a sekund**. Ligger du stilla sparas
+ändå en punkt varje **minut**, så att uppehållet syns i spåret i stället för att
+försvinna. Siffrorna går att ändra överst i `firmware/Gmate/config.h`.
+
+GPX-filen skrivs så att den **alltid går att öppna**, även om strömmen försvinner
+mitt i ett spår. Filen avslutas korrekt var trettionde sekund och nästa punkt
+skriver över avslutningen. Vid ett strömavbrott förlorar du alltså som mest en
+halv minut av spåret, aldrig hela filen.
+
+### ECODRIVE-skärmen
+
+Knappen **ECO** öppnar en skärm som visar hur mjukt du kör, medan du kör. Den är
+gjord för att sitta i bilen och gå att uppfatta i ögonvrån.
+
+Tanken bakom den är enkel: **sparsam körning och mjuk körning är samma sak.**
+Bränsle går åt när farten ändras – vid gaspådrag, inbromsning och kurvtagning –
+och ju häftigare ändringen är, desto mer går åt. Därför går sparsamhet att mäta
+med enbart rörelsesensorn, utan att veta någonting om motorn.
+
+**Bubblan** är ett vattenpass baklänges: den ska stå still i mitten. Ju hårdare
+du kör, desto längre ut vandrar den. Ringarna är 0,1 g var, och färgen följer
+med:
+
+| Färg | Betyder |
+|---|---|
+| Grön | Under 0,15 g – mjukt, så mycket man knappt tänker på |
+| Gul | 0,15–0,30 g – märks i sätet |
+| Röd | Över 0,30 g – passagerarna tittar upp |
+
+Den orange ringen är **högsta värdet sedan nollställning**. Den ligger kvar så
+att du ser hur hårt det blev även när bubblan hunnit tillbaka till mitten.
+
+**Poängen** uppe till höger är 0–100 och lever hela tiden. Den sjunker när du
+går över 0,15 g och återhämtar sig med drygt en poäng per sekund mjuk körning.
+Under siffran står ett omdöme: UTMÄRKT, BRA, OK, HACKIGT eller HÅRT.
+
+**Räknarna** längst ned visar antal hårda moment sedan du nollställde, uppdelat
+i gas, broms och kurva. Under dem står toppvärdet och **hur långt kortet kommit
+med att lära sig vilket håll som är framåt** – se
+[Var får den sitta?](#var-får-den-sitta) nedan.
+
+**NOLLSTÄLL** nollar poäng, toppvärde och räknare – lämpligt vid varje ny resa.
+**TILLBAKA** går till huvudskärmen. Skärmen släcks aldrig av sig själv i
+eco-läget; den är till för att tittas på.
+
+Poängen räknas **hela tiden**, även när skärmen visar något annat eller är
+släckt. Annars skulle den börja om varje gång du tittade på den.
+
+#### Var får den sitta?
+
+**Var som helst. Den behöver inte ligga plant.** Tyngdkraften plockas fram ur
+mätvärdena och räknas bort, så det som blir kvar är den vågräta accelerationen –
+det som faktiskt känns i sätet. En snett monterad enhet visar alltså inte
+konstant utslag, och siffrorna (0,23 g, poängen, räknarna) stämmer oavsett hur
+den är vänd. Vid start står det kort "hittar lodlinjen" medan den ställer in sig.
+
+Det som *inte* går att räkna ut av sig själv är **vilket håll som är framåt**.
+En accelerometer som ligger stilla kan omöjligt veta det – det finns ingen
+körriktning att observera när bilen står. Det märks bara på ett ställe: bubblans
+riktning. Innan kortet vet vilket håll som är framåt är bubblans **storlek**
+rätt men **riktningen godtycklig** – en inbromsning kan lika gärna kasta bubblan
+åt sidan som nedåt.
+
+Därför lär kortet sig riktningen medan du kör. Det jämför GPS-farten med
+accelerationen: ökar farten pekar accelerationen framåt, minskar den pekar den
+bakåt. Efter några gaspådrag och inbromsningar står riktningen, och då dyker
+etiketterna **GAS** och **BROMS** upp kring bubblan. Nedersta raden på
+ECODRIVE-skärmen berättar var den ligger:
+
+| Raden säger | Betyder |
+|---|---|
+| `Riktning: kräver GPS` | Ingen mottagare inkopplad – riktningen går inte att lära sig |
+| `Riktning: kör, gasa och bromsa` | GPS finns, men inlärningen har inte börjat |
+| `Riktning: lär sig 40%` | Pågår. Kör normalt, den blir bättre för varje inbromsning |
+| `Riktning: inlärd` | Klar. Broms = bubblan nedåt, högerkurva = bubblan åt vänster |
+
+Riktningen sparas i kortets flashminne när den satt sig, så nästa gång du
+startar är den redan inlärd.
+
+#### TARA – när du flyttat hållaren
+
+I **MENY** sitter knappen **TARA – STÅ STILL**. Den sparar hur kortet sitter
+just nu, och startar om inlärningen av framåtriktningen.
+
+Du behöver den inte för att komma igång – lutningen hittas ändå av sig själv
+inom en halv minut. Den är till för två saker:
+
+1. **Lodlinjen är rätt direkt vid start** i stället för efter en halv minut, så
+   att de första sekunderna av en resa också duger.
+2. **Riktningen lärs om från början** när du flyttat hållaren. Utan tara sitter
+   den gamla riktningen kvar och korrigeras bara långsamt.
+
+Tryck på knappen **medan bilen står stilla**. Rör sig kortet svarar den
+**STÅ STILL** och sparar ingenting – då är det inte tyngdkraften den skulle
+spara utan en manöver, och en felsparad lodlinje sitter kvar tills du tarar om.
+Under knappen står om ett läge finns sparat.
+
+#### Gas, broms och kurva avgörs av GPS-farten
+
+Räknarna delar upp de hårda momenten i gas, broms och kurva. Den uppdelningen
+görs på farten, inte på accelerometern, just för att den ska fungera oavsett hur
+kortet är vänt. Utan GPS räknas därför alla hårda moment ihop till en enda
+siffra, och skärmen säger rakt ut att uppdelningen inte går att göra – hellre
+det än att visa "hård inbromsning" när du faktiskt svängde.
+
+Trösklarna ligger överst i `firmware/Gmate/config.h` och är satta efter hur det
+känns i bilen. Tycker du att den är för sträng eller för slapp är det de
+värdena du ska ändra.
 
 ### Menyn
 
@@ -86,6 +236,9 @@ först.
 | Mätområde G | ±2, ±4, ±8, ±16 g | ±8 g |
 | Mätområde gyro | ±64 … ±1024 grader/s | ±512 |
 | Släck skärm | aldrig, 15, 30, 60, 300 s | 30 s |
+
+Under listan sitter **TARA – STÅ STILL**, som sparar hur kortet är monterat –
+se [TARA](#tara--när-du-flyttat-hållaren).
 
 Inställningarna sparas i kortet och överlever strömavbrott.
 
@@ -243,9 +396,10 @@ position på flera rader, medan g-krafterna är färska på varje rad.
 
 ## Idéer att bygga vidare på
 
-- **Nollställning.** En knapp som drar bort den rådande lutningen, så att
-  loggen visar avvikelse i stället för absolut riktning.
-- **Toppvärden.** Högsta uppmätta g sedan start, kvar på skärmen.
+- **Uppkoppling.** WiFi-uppladdning till en egen server, så att data går att
+  följa medan mätningen pågår i stället för i efterhand.
+- **Sammanfattning per resa.** En rad per körning med sträcka, topp-g och poäng,
+  så att man ser utvecklingen över tid utan att öppna rådatan.
 
 ---
 

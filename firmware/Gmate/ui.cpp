@@ -1,7 +1,10 @@
 #include "ui.h"
 
+#include <math.h>
+
 #include "config.h"
 #include "gnss.h"
+#include "track.h"
 
 namespace {
 
@@ -38,8 +41,15 @@ const char *sv(const char *utf8) {
       }
       buf[o++] = out;
       i += 2;
-    } else if (c == 0xC2 && (uint8_t)utf8[i + 1] == 0xB0) {
-      buf[o++] = (char)0xF8;  // gradtecken
+    } else if (c == 0xC2 && utf8[i + 1]) {
+      const uint8_t n = (uint8_t)utf8[i + 1];
+      char out = '?';
+      switch (n) {
+        case 0xB0: out = (char)0xF8; break;  // gradtecken
+        case 0xB7: out = (char)0xFA; break;  // mittpunkt, som avdelare
+        default: out = '?'; break;
+      }
+      buf[o++] = out;
       i += 2;
     } else {
       buf[o++] = utf8[i++];
@@ -117,6 +127,15 @@ void fmtBytes(uint64_t b, char *out, size_t len) {
   }
 }
 
+// Stracka: meter sa lange det ar kort, annars kilometer.
+void fmtDistance(double meters, char *out, size_t len) {
+  if (meters < 1000.0) {
+    snprintf(out, len, "%.0f m", meters);
+  } else {
+    snprintf(out, len, "%.2f km", meters / 1000.0);
+  }
+}
+
 // Tusentalsavgransare gor stora radantal lasbara.
 void fmtCount(uint64_t n, char *out, size_t len) {
   char raw[24];
@@ -134,10 +153,21 @@ void fmtCount(uint64_t n, char *out, size_t len) {
 
 namespace ui {
 
-const Rect kBtnStartStop = {16, 258, 418, 118};
-const Rect kBtnSettings = {16, 388, 202, 54};
-const Rect kBtnScreenOff = {232, 388, 202, 54};
-const Rect kBtnBack = {16, 496, 418, 72};
+// Sparknappen far plats genom att de levande matvardena och g-kraftsknappen
+// kortats nagot. Ordningen uppifran ar mätvärden, g-kraft, spar, smaknappar,
+// status.
+const Rect kBtnStartStop = {16, 236, 418, 94};
+const Rect kBtnTrack = {16, 338, 418, 64};
+// Tre smaknappar i stallet for tva. Eco behover na med ett tryck - den ska
+// anvandas medan man kor, och da ar tva tryck ett for mycket.
+const Rect kBtnSettings = {16, 410, 134, 48};
+const Rect kBtnEco = {158, 410, 134, 48};
+const Rect kBtnScreenOff = {300, 410, 134, 48};
+const Rect kBtnTare = {16, 434, 418, 48};
+const Rect kBtnBack = {16, 512, 418, 72};
+
+const Rect kBtnEcoReset = {16, 528, 202, 56};
+const Rect kBtnEcoBack = {232, 528, 202, 56};
 
 Rect settingsMinus(uint8_t row) { return Rect{228, (int16_t)(88 + row * 92), 58, 58}; }
 Rect settingsPlus(uint8_t row) { return Rect{376, (int16_t)(88 + row * 92), 58, 58}; }
@@ -150,6 +180,10 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
   char buf[64];
   char tmp[32];
 
+  const TrackStatus tr = track::status();
+  const bool gpsPresent = gnss::present();
+  const GnssFix fix = gnss::fix();
+
   gfx->fillScreen(C_BG);
 
   // ------------------------------------------------------------ rubrik ----
@@ -159,38 +193,50 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
     printRight(434, 18, 2, C_DIM, clock.c_str() + 11);
   }
 
-  // Liten prick som visar om minneskortet sitter i.
+  // Kortet till hoger, GPS till vanster. Bada visas alltid, aven nar de
+  // saknas - annars gar det inte att se skillnad pa "ingen mottagare
+  // inkopplad" och "mottagare inkopplad men utan position".
   gfx->fillCircle(434, 52, 6, st.sdMounted ? C_GREEN : C_RED);
   printRight(414, 46, 2, C_DIM, st.sdMounted ? "kort OK" : "inget kort");
 
-  // GPS visas bara nar en mottagare faktiskt sitter inkopplad.
-  if (gnss::present()) {
-    const GnssFix f = gnss::fix();
-    if (f.valid) {
-      snprintf(buf, sizeof(buf), "GPS %u sat  %.0f km/h", (unsigned)f.sats,
-               f.speedKmh);
-      printAt(16, 46, 2, C_GREEN, buf);
-    } else {
-      snprintf(buf, sizeof(buf), "GPS söker (%u sat)", (unsigned)f.sats);
-      printAt(16, 46, 2, C_DIM, buf);
-    }
+  uint16_t gpsDot;
+  uint16_t gpsText;
+  if (!gpsPresent) {
+    gpsDot = RGB565(90, 100, 115);
+    gpsText = C_DIM;
+    snprintf(buf, sizeof(buf), "ingen GPS");
+  } else if (fix.valid) {
+    gpsDot = C_GREEN;
+    gpsText = C_TEXT;
+    snprintf(buf, sizeof(buf), "GPS %u sat", (unsigned)fix.sats);
+  } else {
+    gpsDot = C_WARN;
+    gpsText = C_DIM;
+    snprintf(buf, sizeof(buf), "GPS söker (%u sat)", (unsigned)fix.sats);
   }
+  gfx->fillCircle(22, 52, 6, gpsDot);
+  printAt(36, 46, 2, gpsText, buf);
 
   // ------------------------------------------------- levande matvarden ----
-  const Rect live = {16, 74, 418, 172};
+  const Rect live = {16, 74, 418, 152};
   drawPanel(live, C_PANEL);
 
   snprintf(buf, sizeof(buf), "%.2f g", s.atot);
-  printCentered(225, 92, 7, C_TEXT, buf);
+  printCentered(225, 84, 7, C_TEXT, buf);
 
   snprintf(buf, sizeof(buf), "X %+.2f   Y %+.2f   Z %+.2f", s.ax, s.ay, s.az);
-  printCentered(225, 162, 2, C_ACCENT, buf);
+  printCentered(225, 148, 2, C_ACCENT, buf);
 
   snprintf(buf, sizeof(buf), "%+.0f  %+.0f  %+.0f grader/s", s.gx, s.gy, s.gz);
-  printCentered(225, 190, 2, C_DIM, buf);
+  printCentered(225, 172, 2, C_DIM, buf);
 
-  snprintf(buf, sizeof(buf), "%.1f \xC2\xB0" "C", s.temp);
-  printCentered(225, 216, 2, C_DIM, buf);
+  if (gpsPresent && fix.valid) {
+    snprintf(buf, sizeof(buf), "%.1f \xC2\xB0" "C   ·   %.1f km/h", s.temp,
+             fix.speedKmh);
+  } else {
+    snprintf(buf, sizeof(buf), "%.1f \xC2\xB0" "C", s.temp);
+  }
+  printCentered(225, 196, 2, C_DIM, buf);
 
   // ------------------------------------------------ start- och stoppknapp --
   if (st.logging) {
@@ -201,16 +247,28 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
     drawButton(kBtnStartStop, RGB565(70, 70, 80), "SATT I KORT", 3, C_DIM);
   }
 
+  // ---------------------------------------------------------- sparknapp ----
+  if (!gpsPresent) {
+    // Utan mottagare finns inget spar att rita, sa knappen ar slack i stallet
+    // for att lova nagot den inte kan halla.
+    drawButton(kBtnTrack, RGB565(46, 52, 64), "SPÅR: INGEN GPS", 2, C_DIM);
+  } else if (tr.logging) {
+    drawButton(kBtnTrack, C_RED, "STOPPA SPÅR", 3, C_TEXT);
+  } else {
+    drawButton(kBtnTrack, C_ACCENT, "STARTA SPÅR", 3, C_BG);
+  }
+
   // ------------------------------------------------------ smaknapparna ----
-  drawButton(kBtnSettings, C_PANEL, st.logging ? "MENY (LAST)" : "MENY", 2,
+  drawButton(kBtnSettings, C_PANEL, st.logging ? "LÅST" : "MENY", 2,
              st.logging ? C_DIM : C_TEXT);
-  drawButton(kBtnScreenOff, C_PANEL, "SLACK SKARM", 2, C_TEXT);
+  drawButton(kBtnEco, C_PANEL, "ECO", 2, C_TEXT);
+  drawButton(kBtnScreenOff, C_PANEL, "SLÄCK", 2, C_TEXT);
 
   // ------------------------------------------------------------ status ----
-  const Rect status = {16, 456, 418, 132};
+  const Rect status = {16, 466, 418, 126};
   drawPanel(status, C_PANEL);
 
-  int16_t y = 470;
+  int16_t y = 478;
   if (st.logging) {
     fmtElapsed(st.elapsedS, tmp, sizeof(tmp));
     snprintf(buf, sizeof(buf), "Loggar  %s", tmp);
@@ -224,9 +282,6 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
     printAt(32, y, 2, C_TEXT, buf);
     y += 26;
 
-    snprintf(buf, sizeof(buf), "Fil: %s", st.fileName);
-    printAt(32, y, 2, C_DIM, buf);
-    y += 26;
   } else {
     printAt(32, y, 2, C_DIM, "Redo att logga");
     y += 26;
@@ -237,11 +292,28 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
     snprintf(buf, sizeof(buf), "Ledigt: %s av %s", tmp, total);
     printAt(32, y, 2, C_TEXT, buf);
     y += 26;
+  }
 
+  // Tredje raden gar till sparet nar det loggar, eftersom det da ar det man
+  // vill folja. Annars star det som stod dar forut.
+  if (tr.logging) {
+    if (tr.waitingForFix) {
+      printAt(32, y, 2, C_WARN, "Spår: väntar på position");
+    } else {
+      fmtDistance(tr.distanceM, tmp, sizeof(tmp));
+      char pts[24];
+      fmtCount(tr.points, pts, sizeof(pts));
+      snprintf(buf, sizeof(buf), "Spår: %s · %s punkter", tmp, pts);
+      printAt(32, y, 2, C_GREEN, buf);
+    }
+  } else if (st.logging) {
+    snprintf(buf, sizeof(buf), "Fil: %s", st.fileName);
+    printAt(32, y, 2, C_DIM, buf);
+  } else {
     snprintf(buf, sizeof(buf), "Frekvens: %u Hz", (unsigned)logger::rate());
     printAt(32, y, 2, C_DIM, buf);
-    y += 26;
   }
+  y += 26;
 
   fmtDuration(secondsLeft, tmp, sizeof(tmp));
   snprintf(buf, sizeof(buf), "Utrymmet racker: %s", tmp);
@@ -257,7 +329,6 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
 
 void drawSettings(const AppSettings &cfg) {
   if (!gfx) return;
-  char buf[48];
 
   gfx->fillScreen(C_BG);
   printAt(16, 14, 3, C_TEXT, "INSTÄLLNINGAR");
@@ -295,7 +366,160 @@ void drawSettings(const AppSettings &cfg) {
     printCentered(331, y + 26, 3, C_TEXT, values[row]);
   }
 
+  // --------------------------------------------------------------- tara ----
+  // Taran sparar hur kortet sitter just nu. Lutningen hittas visserligen av
+  // sig sjalv efter en halv minut, men med ett sparat lage ar lodlinjen ratt
+  // redan vid start - och framatriktningen lars om fran borjan, vilket ar det
+  // man vill nar hallaren flyttats.
+  const EcoStatus ec = eco::status();
+  drawButton(kBtnTare, C_ACCENT, "TARA - STÅ STILL", 2, C_BG);
+  if (ec.levelStored) {
+    printCentered(225, 488, 2, C_GREEN, "Monteringsläget är sparat");
+  } else {
+    printCentered(225, 488, 2, C_DIM, "Inget läge sparat ännu");
+  }
+
   drawButton(kBtnBack, C_GREEN, "KLAR", 4, C_TEXT);
+  gfx->flush();
+}
+
+void drawEco(const EcoStatus &e) {
+  if (!gfx) return;
+  char buf[64];
+
+  gfx->fillScreen(C_BG);
+
+  // Fargen foljer hur hart du kor just nu och ar samma overallt pa skarmen,
+  // sa att man uppfattar den i ogonvran utan att lasa nagot.
+  uint16_t zone;
+  if (e.magG < ECO_SOFT_G) {
+    zone = C_GREEN;
+  } else if (e.magG < ECO_HARD_G) {
+    zone = C_WARN;
+  } else {
+    zone = C_RED;
+  }
+
+  printAt(16, 14, 3, C_TEXT, "ECODRIVE");
+
+  // ---------------------------------------------------------------- poang --
+  const int score = (int)(e.score + 0.5f);
+  const char *grade;
+  if (score >= 90) {
+    grade = "UTMÄRKT";
+  } else if (score >= 75) {
+    grade = "BRA";
+  } else if (score >= 60) {
+    grade = "OK";
+  } else if (score >= 40) {
+    grade = "HACKIGT";
+  } else {
+    grade = "HÅRT";
+  }
+
+  uint16_t scoreColor = C_GREEN;
+  if (score < 40) {
+    scoreColor = C_RED;
+  } else if (score < 75) {
+    scoreColor = C_WARN;
+  }
+
+  snprintf(buf, sizeof(buf), "%d", score);
+  printRight(434, 8, 6, scoreColor, buf);
+  printRight(434, 56, 2, C_DIM, grade);
+
+  // -------------------------------------------------------------- bubblan --
+  // En vattenpassbubbla, fast tvarto: den ska sta still i mitten. Ju hardare
+  // du kor, desto langre ut vandrar den. Ringarna ar 0,1 g var.
+  const int16_t cx = 225;
+  const int16_t cy = 268;
+  const int16_t rOuter = 148;
+  const float pxPerG = (float)rOuter / ECO_BUBBLE_FULL_G;
+
+  for (int i = 1; i <= 4; i++) {
+    const int16_t r = (int16_t)(rOuter * i / 4);
+    // Ringen dar det slutar vara mjuk korning ritas tydligare an de andra.
+    const bool isSoftRing = (i == 2);  // 0,2 g
+    gfx->drawCircle(cx, cy, r, isSoftRing ? RGB565(90, 110, 135)
+                                          : RGB565(45, 55, 72));
+  }
+  gfx->drawFastHLine(cx - rOuter, cy, rOuter * 2, RGB565(38, 46, 60));
+  gfx->drawFastVLine(cx, cy - rOuter, rOuter * 2, RGB565(38, 46, 60));
+
+  // Etiketterna satts ut forst nar kortet vet vilket hall som ar framat.
+  // Innan dess vore de en gissning, och en felmarkt axel ar samre an ingen.
+  if (e.forwardKnown) {
+    printCentered(cx, cy - rOuter - 22, 2, C_DIM, "GAS");
+    printCentered(cx, cy + rOuter + 6, 2, C_DIM, "BROMS");
+  }
+
+  if (e.levelled) {
+    // Toppvardet lamnas kvar som en ring, sa att man ser hur hart det blev
+    // aven nar bubblan hunnit tillbaka till mitten.
+    if (e.peakG > 0.02f) {
+      int16_t rp = (int16_t)(e.peakG * pxPerG);
+      if (rp > rOuter) rp = rOuter;
+      gfx->drawCircle(cx, cy, rp, RGB565(120, 90, 40));
+    }
+
+    float px = e.lonG * pxPerG;
+    float py = e.latG * pxPerG;
+    const float d = sqrtf(px * px + py * py);
+    // Bubblan stannar vid ytterringen i stallet for att forsvinna ut ur
+    // rutan - man vill se att det slog i taket, inte tappa den helt.
+    if (d > rOuter) {
+      px = px * rOuter / d;
+      py = py * rOuter / d;
+    }
+
+    gfx->fillCircle(cx + (int16_t)py, cy - (int16_t)px, 17, zone);
+    gfx->drawCircle(cx + (int16_t)py, cy - (int16_t)px, 17, C_TEXT);
+
+    snprintf(buf, sizeof(buf), "%.2f g", e.magG);
+    printCentered(cx, cy - 10, 3, C_TEXT, buf);
+  } else {
+    printCentered(cx, cy - 10, 2, C_DIM, "hittar lodlinjen ...");
+  }
+
+  // ------------------------------------------------------------- raknare --
+  const Rect box = {16, 440, 418, 82};
+  drawPanel(box, C_PANEL);
+
+  if (e.gpsClassify) {
+    snprintf(buf, sizeof(buf), "Hårt: gas %lu  broms %lu  kurva %lu",
+             (unsigned long)e.hardAccel, (unsigned long)e.hardBrake,
+             (unsigned long)e.hardTurn);
+    printCentered(225, 450, 2, C_TEXT, buf);
+  } else {
+    // Utan GPS gar det inte att veta om ett ryck var gas, broms eller kurva.
+    // Da sags det rakt ut i stallet for att gissa.
+    snprintf(buf, sizeof(buf), "%lu hårda moment (ingen GPS)",
+             (unsigned long)e.hardTotal);
+    printCentered(225, 450, 2, C_TEXT, buf);
+  }
+
+  snprintf(buf, sizeof(buf), "Topp %.2f g", e.peakG);
+  printCentered(225, 472, 2, C_ACCENT, buf);
+
+  // Raden om riktningen ar det enda stallet dar man far veta om bubblan pekar
+  // at ratt hall eller bara har ratt storlek. Utan den skulle en godtyckligt
+  // vand bubbla se precis lika trovardig ut som en inlard.
+  if (e.forwardKnown && e.forwardQuality >= 0.99f) {
+    printCentered(225, 494, 2, C_GREEN, "Riktning: inlärd");
+  } else if (e.forwardKnown) {
+    snprintf(buf, sizeof(buf), "Riktning: lär sig %d%%",
+             (int)(e.forwardQuality * 100.0f + 0.5f));
+    printCentered(225, 494, 2, C_WARN, buf);
+  } else if (e.forwardNeedsGnss) {
+    printCentered(225, 494, 2, C_DIM, "Riktning: kräver GPS");
+  } else {
+    printCentered(225, 494, 2, C_DIM, "Riktning: kör, gasa och bromsa");
+  }
+
+  // ------------------------------------------------------------ knappar ---
+  drawButton(kBtnEcoReset, C_PANEL, "NOLLSTÄLL", 2, C_TEXT);
+  drawButton(kBtnEcoBack, C_ACCENT, "TILLBAKA", 2, C_BG);
+
   gfx->flush();
 }
 
