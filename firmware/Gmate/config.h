@@ -79,8 +79,14 @@
 // Poang som dras per g over den mjuka gransen och sekund.
 #define ECO_PENALTY_PER_G_S 40.0f
 
-// Poang som ateras per sekunds mjuk korning.
-#define ECO_RECOVERY_PER_S 1.2f
+// Tiden poangen speglar. En sammanhangande mjuk stracka sa har lang tar
+// poangen fran noll tillbaka till hundra. Det ar det som avgor om siffran
+// betyder "sa har har du kort den senaste stunden" eller "sa har har du kort
+// sedan du tryckte nollstall" - utan ett fonster minns den allt lika mycket,
+// och da slutar den saga nagot om hur det gar just nu.
+static const uint16_t kEcoWindowS[] = {60, 120, 300, 600, 1800, 3600};
+static const uint8_t kEcoWindowCount = 6;
+#define DEFAULT_ECO_WINDOW_INDEX 1  // 2 min
 
 // Vad ytterringen i bubblan motsvarar.
 #define ECO_BUBBLE_FULL_G 0.40f

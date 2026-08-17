@@ -67,7 +67,8 @@ void tick(const Sample &s);
 // den harda: en egen ratt for den vore en knapp till att forsta utan att ge
 // nagot, eftersom det enda den gor ar att hindra ett enda ryck fran att raknas
 // som flera nar vardet studsar kring gransen.
-void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs);
+void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs,
+               uint16_t windowS);
 
 // Nollstaller poang, toppvarde och raknare. Tyngdkraftsriktningen behalls,
 // eftersom den inte har med korningen att gora.

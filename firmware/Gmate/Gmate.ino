@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "eco.h"
+#include "gnss.h"
 #include "logger.h"
 #include "track.h"
 #include "ui.h"
@@ -36,7 +37,8 @@ Preferences prefs;
 AppSettings cfg = {DEFAULT_RATE_INDEX,        DEFAULT_ACCEL_RANGE_INDEX,
                    DEFAULT_GYRO_RANGE_INDEX,  DEFAULT_SCREEN_TIMEOUT_INDEX,
                    DEFAULT_ECO_SOFT_INDEX,    DEFAULT_ECO_HARD_INDEX,
-                   DEFAULT_ECO_BUBBLE_INDEX,  DEFAULT_ECO_PENALTY_INDEX};
+                   DEFAULT_ECO_BUBBLE_INDEX,  DEFAULT_ECO_PENALTY_INDEX,
+                   DEFAULT_ECO_WINDOW_INDEX};
 
 Screen screen = SCREEN_MAIN;
 bool screenOn = true;
@@ -57,6 +59,7 @@ void loadSettings() {
   cfg.ecoHardIdx = prefs.getUChar("ecoHard", DEFAULT_ECO_HARD_INDEX);
   cfg.ecoBubbleIdx = prefs.getUChar("ecoBub", DEFAULT_ECO_BUBBLE_INDEX);
   cfg.ecoPenaltyIdx = prefs.getUChar("ecoPen", DEFAULT_ECO_PENALTY_INDEX);
+  cfg.ecoWindowIdx = prefs.getUChar("ecoWin", DEFAULT_ECO_WINDOW_INDEX);
   prefs.end();
 
   // Ett trasigt eller gammalt sparat varde far inte gora appen obrukbar.
@@ -74,6 +77,9 @@ void loadSettings() {
   if (cfg.ecoPenaltyIdx >= kEcoPenaltyCount) {
     cfg.ecoPenaltyIdx = DEFAULT_ECO_PENALTY_INDEX;
   }
+  if (cfg.ecoWindowIdx >= kEcoWindowCount) {
+    cfg.ecoWindowIdx = DEFAULT_ECO_WINDOW_INDEX;
+  }
 }
 
 void saveSettings() {
@@ -86,6 +92,7 @@ void saveSettings() {
   prefs.putUChar("ecoHard", cfg.ecoHardIdx);
   prefs.putUChar("ecoBub", cfg.ecoBubbleIdx);
   prefs.putUChar("ecoPen", cfg.ecoPenaltyIdx);
+  prefs.putUChar("ecoWin", cfg.ecoWindowIdx);
   prefs.end();
 }
 
@@ -94,7 +101,48 @@ void applySettings() {
   logger::setRanges(kAccelRanges[cfg.accelIdx], kGyroRanges[cfg.gyroIdx]);
   eco::setLimits(kEcoSoft[cfg.ecoSoftIdx], kEcoHard[cfg.ecoHardIdx],
                  kEcoBubble[cfg.ecoBubbleIdx],
-                 kEcoPenalty[cfg.ecoPenaltyIdx]);
+                 kEcoPenalty[cfg.ecoPenaltyIdx],
+                 kEcoWindowS[cfg.ecoWindowIdx]);
+}
+
+// ------------------------------------------------------------ felsokning --
+// Skissen skrev tidigare ingenting alls till serieporten, sa en logg fran
+// webbflasharen visade bara ROM-bootloaderns rader och sa ingenting om hur det
+// gick sedan. Det raden nedan ger ar den enda insyn man har i ett kort som
+// sitter i en bil.
+
+void scanI2C() {
+  Serial.println("i2c-enheter:");
+  uint8_t found = 0;
+  for (uint8_t addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() != 0) continue;
+    found++;
+    const char *known = "";
+    switch (addr) {
+      case 0x20: known = "  (io-expander)"; break;
+      case 0x38: known = "  (pekskarm)"; break;
+      case 0x42: known = "  (GPS)"; break;
+      case 0x51: known = "  (klocka)"; break;
+      case 0x6A:
+      case 0x6B: known = "  (rorelsesensor)"; break;
+    }
+    Serial.printf("  0x%02X%s\n", addr, known);
+  }
+  if (found == 0) Serial.println("  inga - bussen ar tyst");
+}
+
+void printGnssLine() {
+  const GnssDebug d = gnss::debug();
+  if (!d.present) {
+    Serial.println("GPS: ingen modul pa 0x42");
+    return;
+  }
+  // Paket utan satelliter ar antennfallet: modulen mar bra, den ser bara
+  // ingenting. Inga paket alls ar ett busproblem.
+  Serial.printf("GPS: avlasningar %lu  paket %lu  fixtyp %u  satelliter %u\n",
+                (unsigned long)d.polls, (unsigned long)d.packets,
+                (unsigned)d.fixType, (unsigned)d.sats);
 }
 
 // -------------------------------------------------------- skarm av och pa --
@@ -189,9 +237,9 @@ void onPressEco(int16_t x, int16_t y) {
 // ar detsamma oavsett var de star, sa det finns ingen fil som kan bli
 // inkonsekvent.
 void onPressEcoLimits(int16_t x, int16_t y) {
-  for (uint8_t row = 0; row < 4; row++) {
-    const bool minus = ui::settingsMinus(row).contains(x, y);
-    const bool plus = ui::settingsPlus(row).contains(x, y);
+  for (uint8_t row = 0; row < 5; row++) {
+    const bool minus = ui::ecoMinus(row).contains(x, y);
+    const bool plus = ui::ecoPlus(row).contains(x, y);
     if (!minus && !plus) continue;
 
     uint8_t *value = nullptr;
@@ -201,6 +249,7 @@ void onPressEcoLimits(int16_t x, int16_t y) {
       case 1: value = &cfg.ecoHardIdx; count = kEcoHardCount; break;
       case 2: value = &cfg.ecoBubbleIdx; count = kEcoBubbleCount; break;
       case 3: value = &cfg.ecoPenaltyIdx; count = kEcoPenaltyCount; break;
+      case 4: value = &cfg.ecoWindowIdx; count = kEcoWindowCount; break;
     }
     if (!value) continue;
 
@@ -319,6 +368,12 @@ void handleButton() {
 
 void setup() {
   Serial.begin(115200);
+  // Webbflasharens konsol hinner inte koppla upp sig forran usb-porten
+  // raknats upp pa nytt efter omstarten. Utan pausen forsvinner rubriken.
+  delay(1500);
+  Serial.println();
+  Serial.println("=== G-SPOTTER ===");
+  Serial.println("byggd " __DATE__ " " __TIME__);
 
   // Skarmens matning maste sla pa forst av allt.
   pinMode(PIN_PANEL_POWER, OUTPUT);
@@ -340,6 +395,13 @@ void setup() {
   const bool imuOk = logger::begin();
   applySettings();
 
+  // Har ar i2c-bussen uppe, sa nu gar det att se vad som faktiskt sitter pa
+  // den. Saknas 0x42 ar det kabeln eller kontakten, inte satelliterna.
+  scanI2C();
+  Serial.printf("rorelsesensor: %s\n", imuOk ? "OK" : "SVARAR INTE");
+  Serial.printf("minneskort: %s\n", logger::sdMounted() ? "OK" : "saknas");
+  printGnssLine();
+
   touch.setPins(PIN_TOUCH_RST, TOUCH_IRQ_NOT_CONNECTED);
   touchOk = touch.begin(Wire, FT6X36_SLAVE_ADDRESS, PIN_I2C_SDA, PIN_I2C_SCL);
 
@@ -352,9 +414,19 @@ void setup() {
   lastActivityMs = millis();
 }
 
+uint32_t lastGnssLogMs = 0;
+
 void loop() {
   handleButton();
   handleTouch();
+
+  // En rad var femte sekund racker for att folja en uppstart utan att draonka
+  // konsolen. Den fortsatter aven med slackt skarm, vilket ar precis nar man
+  // behover den.
+  if (millis() - lastGnssLogMs > 5000) {
+    lastGnssLogMs = millis();
+    printGnssLine();
+  }
 
   // Slack skarmen automatiskt under loggning, men bara om anvandaren valt en
   // tid. Nar ingen loggning pagar star skarmen kvar, sa att den aldrig kanns
