@@ -329,7 +329,6 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
 
 void drawSettings(const AppSettings &cfg) {
   if (!gfx) return;
-  char buf[48];
 
   gfx->fillScreen(C_BG);
   printAt(16, 14, 3, C_TEXT, "INSTÄLLNINGAR");
