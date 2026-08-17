@@ -44,6 +44,16 @@ struct EcoStatus {
   uint32_t hardTotal;
 
   uint32_t elapsedS;
+
+  // Sant nar kortet ligger stilla. Avgors av gyrot, inte av nagot som raknats
+  // fram ur lodlinjen.
+  bool atRest;
+
+  // Granserna som gallde nar vardena raknades fram. Skarmen ritar ringar och
+  // farger efter dessa, sa att en andring i gransmenyn syns direkt i bilden.
+  float softG;
+  float hardG;
+  float bubbleG;
 };
 
 namespace eco {
@@ -52,6 +62,12 @@ void begin();
 
 // Anropas fran avlasningstraden, en gang per varv.
 void tick(const Sample &s);
+
+// Granserna, ställbara i farten fran gransmenyn. Avslutningsgransen harleds ur
+// den harda: en egen ratt for den vore en knapp till att forsta utan att ge
+// nagot, eftersom det enda den gor ar att hindra ett enda ryck fran att raknas
+// som flera nar vardet studsar kring gransen.
+void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs);
 
 // Nollstaller poang, toppvarde och raknare. Tyngdkraftsriktningen behalls,
 // eftersom den inte har med korningen att gora.

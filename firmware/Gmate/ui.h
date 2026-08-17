@@ -15,9 +15,21 @@ struct AppSettings {
   uint8_t accelIdx;
   uint8_t gyroIdx;
   uint8_t screenIdx;
+
+  // Ecodrive-granserna. Egen meny, atkomlig fran ecodrive-skarmen, sa att de
+  // gar att prova ut medan bilen rullar.
+  uint8_t ecoSoftIdx;
+  uint8_t ecoHardIdx;
+  uint8_t ecoBubbleIdx;
+  uint8_t ecoPenaltyIdx;
 };
 
-enum Screen { SCREEN_MAIN, SCREEN_SETTINGS, SCREEN_ECO };
+enum Screen {
+  SCREEN_MAIN,
+  SCREEN_SETTINGS,
+  SCREEN_ECO,
+  SCREEN_ECO_LIMITS,
+};
 
 // En ruta pa skarmen. Anvands bade for att rita knappar och for att avgora
 // var anvandaren tryckte.
@@ -39,6 +51,7 @@ extern const Rect kBtnScreenOff;
 
 // Knappytor pa ecodrive-skarmen.
 extern const Rect kBtnEcoReset;
+extern const Rect kBtnEcoLimits;
 extern const Rect kBtnEcoBack;
 
 // Knappytor i installningsmenyn. Rad 0-3, minus och plus.
@@ -53,6 +66,7 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
               const String &clock);
 void drawSettings(const AppSettings &cfg);
 void drawEco(const EcoStatus &e);
+void drawEcoLimits(const AppSettings &cfg, const EcoStatus &e);
 
 // Meddelande over hela skarmen, for fel som anvandaren maste atgarda.
 void drawMessage(const char *title, const char *line1, const char *line2);

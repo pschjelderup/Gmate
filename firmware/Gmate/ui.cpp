@@ -166,8 +166,12 @@ const Rect kBtnScreenOff = {300, 410, 134, 48};
 const Rect kBtnTare = {16, 434, 418, 48};
 const Rect kBtnBack = {16, 512, 418, 72};
 
-const Rect kBtnEcoReset = {16, 528, 202, 56};
-const Rect kBtnEcoBack = {232, 528, 202, 56};
+// Tre knappar pa ecodrive-skarmen. Gransmenyn nas harifran och inte fran
+// huvudmenyn, eftersom det ar har man star nar man vill andra nagot - och
+// huvudmenyn ar dessutom last under pagaende loggning.
+const Rect kBtnEcoReset = {16, 528, 131, 56};
+const Rect kBtnEcoLimits = {159, 528, 131, 56};
+const Rect kBtnEcoBack = {302, 528, 132, 56};
 
 Rect settingsMinus(uint8_t row) { return Rect{228, (int16_t)(88 + row * 92), 58, 58}; }
 Rect settingsPlus(uint8_t row) { return Rect{376, (int16_t)(88 + row * 92), 58, 58}; }
@@ -397,9 +401,9 @@ void drawEco(const EcoStatus &e) {
   // Fargen foljer hur hart du kor just nu och ar samma overallt pa skarmen,
   // sa att man uppfattar den i ogonvran utan att lasa nagot.
   uint16_t zone;
-  if (e.magG < ECO_SOFT_G) {
+  if (e.magG < e.softG) {
     zone = C_GREEN;
-  } else if (e.magG < ECO_HARD_G) {
+  } else if (e.magG < e.hardG) {
     zone = C_WARN;
   } else {
     zone = C_RED;
@@ -439,14 +443,24 @@ void drawEco(const EcoStatus &e) {
   const int16_t cx = 225;
   const int16_t cy = 268;
   const int16_t rOuter = 148;
-  const float pxPerG = (float)rOuter / ECO_BUBBLE_FULL_G;
+  // Ytterringen ar det varde gransmenyn sagt, sa att en andring dar syns
+  // direkt i bilden.
+  const float full = e.bubbleG > 0.05f ? e.bubbleG : ECO_BUBBLE_FULL_G;
+  const float pxPerG = (float)rOuter / full;
 
   for (int i = 1; i <= 4; i++) {
     const int16_t r = (int16_t)(rOuter * i / 4);
-    // Ringen dar det slutar vara mjuk korning ritas tydligare an de andra.
-    const bool isSoftRing = (i == 2);  // 0,2 g
-    gfx->drawCircle(cx, cy, r, isSoftRing ? RGB565(90, 110, 135)
-                                          : RGB565(45, 55, 72));
+    gfx->drawCircle(cx, cy, r, RGB565(45, 55, 72));
+  }
+  // Sjalva granserna ritas dar de faktiskt ligger i stallet for pa en fast
+  // ring. Flyttar man dem i gransmenyn flyttar sig ringarna med.
+  const int16_t rSoft = (int16_t)(e.softG * pxPerG);
+  const int16_t rHard = (int16_t)(e.hardG * pxPerG);
+  if (rSoft > 4 && rSoft <= rOuter) {
+    gfx->drawCircle(cx, cy, rSoft, RGB565(60, 130, 85));
+  }
+  if (rHard > 4 && rHard <= rOuter) {
+    gfx->drawCircle(cx, cy, rHard, RGB565(140, 55, 55));
   }
   gfx->drawFastHLine(cx - rOuter, cy, rOuter * 2, RGB565(38, 46, 60));
   gfx->drawFastVLine(cx, cy - rOuter, rOuter * 2, RGB565(38, 46, 60));
@@ -464,7 +478,7 @@ void drawEco(const EcoStatus &e) {
     if (e.peakG > 0.02f) {
       int16_t rp = (int16_t)(e.peakG * pxPerG);
       if (rp > rOuter) rp = rOuter;
-      gfx->drawCircle(cx, cy, rp, RGB565(120, 90, 40));
+      gfx->drawCircle(cx, cy, rp, RGB565(175, 135, 225));
     }
 
     float px = e.lonG * pxPerG;
@@ -523,8 +537,60 @@ void drawEco(const EcoStatus &e) {
 
   // ------------------------------------------------------------ knappar ---
   drawButton(kBtnEcoReset, C_PANEL, "NOLLSTÄLL", 2, C_TEXT);
+  drawButton(kBtnEcoLimits, C_PANEL, "GRÄNSER", 2, C_TEXT);
   drawButton(kBtnEcoBack, C_ACCENT, "TILLBAKA", 2, C_BG);
 
+  gfx->flush();
+}
+
+void drawEcoLimits(const AppSettings &cfg, const EcoStatus &e) {
+  if (!gfx) return;
+  char buf[48];
+
+  gfx->fillScreen(C_BG);
+  printAt(16, 14, 3, C_TEXT, "GRÄNSER");
+
+  // Det levande vardet star kvar overst. Utan det skulle man stalla granser i
+  // blindo - hela poangen med att menyn nas harifran ar att man ser vad man
+  // faktiskt kor med medan man skruvar.
+  snprintf(buf, sizeof(buf), "just nu %.2f g", e.magG);
+  printRight(434, 22, 2, e.magG >= e.hardG ? C_RED
+                         : e.magG >= e.softG ? C_WARN
+                                             : C_GREEN,
+             buf);
+
+  // Etiketterna hålls korta for att inte na in under minusknappen vid x=228.
+  // Forklaringen far en egen, mindre rad under.
+  const char *labels[4] = {"Mjuk gräns", "Hård gräns", "Ytterring",
+                           "Stränghet"};
+  const char *hints[4] = {"börjar kosta poäng", "räknas som hårt moment",
+                          "bubblans ytterkant", "poäng per g och sekund"};
+
+  char values[4][24];
+  snprintf(values[0], sizeof(values[0]), "%.2f g", kEcoSoft[cfg.ecoSoftIdx]);
+  snprintf(values[1], sizeof(values[1]), "%.2f g", kEcoHard[cfg.ecoHardIdx]);
+  snprintf(values[2], sizeof(values[2]), "%.2f g",
+           kEcoBubble[cfg.ecoBubbleIdx]);
+  snprintf(values[3], sizeof(values[3]), "%.0f",
+           kEcoPenalty[cfg.ecoPenaltyIdx]);
+
+  for (uint8_t row = 0; row < 4; row++) {
+    const int16_t y = 88 + row * 92;
+    const Rect panel = {16, y, 418, 72};
+    drawPanel(panel, C_PANEL);
+
+    printAt(32, y + 14, 2, C_TEXT, labels[row]);
+    printAt(32, y + 42, 1, C_DIM, hints[row]);
+
+    const Rect minus = settingsMinus(row);
+    const Rect plus = settingsPlus(row);
+    drawButton(minus, C_ACCENT, "-", 3, C_BG);
+    drawButton(plus, C_ACCENT, "+", 3, C_BG);
+
+    printCentered(331, y + 26, 3, C_TEXT, values[row]);
+  }
+
+  drawButton(kBtnBack, C_GREEN, "KLAR", 4, C_TEXT);
   gfx->flush();
 }
 
