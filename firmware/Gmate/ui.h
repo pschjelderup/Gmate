@@ -44,6 +44,7 @@ extern const Rect kBtnEcoBack;
 // Knappytor i installningsmenyn. Rad 0-3, minus och plus.
 Rect settingsMinus(uint8_t row);
 Rect settingsPlus(uint8_t row);
+extern const Rect kBtnTare;
 extern const Rect kBtnBack;
 
 void begin(Arduino_Canvas *canvas);

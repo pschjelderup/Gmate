@@ -23,6 +23,18 @@ struct EcoStatus {
   float peakG;      // hogsta sedan nollstallningen
   bool levelled;    // sant nar tyngdkraften hittats och vardena ar palitliga
 
+  // Monteringslaget. Lutning klarar sig utan tara - den hittas anda - men ett
+  // sparat lage gor att lodlinjen ar ratt direkt vid start i stallet for efter
+  // en halv minut.
+  bool levelStored;
+
+  // Vilket hall som ar framat. Gar bara att lara sig under korning: nar bilen
+  // star still finns inget framat att observera. Utan den ar bubblans storlek
+  // ratt men riktningen godtycklig.
+  bool forwardKnown;
+  float forwardQuality;  // 0-1
+  bool forwardNeedsGnss;
+
   // Handelser sedan nollstallningen. Uppdelningen kraver GPS; utan den
   // rapporteras allt som hardTotal.
   bool gpsClassify;
@@ -44,6 +56,13 @@ void tick(const Sample &s);
 // Nollstaller poang, toppvarde och raknare. Tyngdkraftsriktningen behalls,
 // eftersom den inte har med korningen att gora.
 void reset();
+
+// Sparar monteringslaget och borjar om inlarningen av framatriktningen.
+// Sjalva arbetet utfors av avlasningstraden; anropet vantar pa svar i upp till
+// nagra sekunder och far darfor inte goras fran den traden.
+// Returnerar false om enheten inte star stilla - da ar det inte tyngdkraften
+// man skulle spara utan en rorelse.
+bool tare();
 
 EcoStatus status();
 

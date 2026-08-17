@@ -85,9 +85,26 @@
 // Vad ytterringen i bubblan motsvarar.
 #define ECO_BUBBLE_FULL_G 0.40f
 
-// Tidskonstant for att hitta tyngdkraften. Langre an alla korrorelser, kortare
-// an en backe.
-#define ECO_GRAVITY_TAU_S 3.0f
+// Tidskonstanter for att hitta tyngdkraften. Den snabba anvands bara tills
+// lodlinjen hittats forsta gangen; darefter tar den langsamma over, sa att en
+// utdragen kurva inte hinner tolkas som "ned".
+#define ECO_GRAVITY_TAU_FAST_S 2.0f
+#define ECO_GRAVITY_TAU_SLOW_S 30.0f
+
+// Under manover uppdateras lodlinjen inte alls. Det ar det som gor att en lang
+// avfart eller rondell far behalla sitt varde i stallet for att sjunka undan.
+#define ECO_FREEZE_MAG_G 0.12f
+#define ECO_FREEZE_LONG_G 0.06f
+
+// Sa mycket maste hanna for att en handelse ska duga till att lara ut vilket
+// hall som ar framat. Under detta ar bruset for stort for att lita pa.
+#define ECO_FWD_MIN_LONG_G 0.08f
+#define ECO_FWD_MIN_MAG_G 0.08f
+
+// Inlarningstakt: snabb precis efter en tara, langsam darefter sa att
+// riktningen inte vandrar av enstaka konstiga handelser.
+#define ECO_FWD_GAIN_FAST 0.20f
+#define ECO_FWD_GAIN_SLOW 0.04f
 
 // ------------------------------------------------------------ sparlogg ----
 #define TRACK_DIR "/GMATE/SPAR"

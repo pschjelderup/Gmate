@@ -152,7 +152,9 @@ går över 0,15 g och återhämtar sig med drygt en poäng per sekund mjuk körn
 Under siffran står ett omdöme: UTMÄRKT, BRA, OK, HACKIGT eller HÅRT.
 
 **Räknarna** längst ned visar antal hårda moment sedan du nollställde, uppdelat
-i gas, broms och kurva.
+i gas, broms och kurva. Under dem står toppvärdet och **hur långt kortet kommit
+med att lära sig vilket håll som är framåt** – se
+[Var får den sitta?](#var-får-den-sitta) nedan.
 
 **NOLLSTÄLL** nollar poäng, toppvärde och räknare – lämpligt vid varje ny resa.
 **TILLBAKA** går till huvudskärmen. Skärmen släcks aldrig av sig själv i
@@ -161,16 +163,60 @@ eco-läget; den är till för att tittas på.
 Poängen räknas **hela tiden**, även när skärmen visar något annat eller är
 släckt. Annars skulle den börja om varje gång du tittade på den.
 
-#### Två saker värda att veta
+#### Var får den sitta?
 
-**Kortet får sitta hur som helst.** Tyngdkraften plockas fram ur mätvärdena och
-räknas bort, så det som blir kvar är den vågräta accelerationen – det som
-faktiskt känns i sätet. En snett monterad enhet visar alltså inte konstant
-utslag. Vid start står det kort "hittar lodlinjen" medan den ställer in sig.
+**Var som helst. Den behöver inte ligga plant.** Tyngdkraften plockas fram ur
+mätvärdena och räknas bort, så det som blir kvar är den vågräta accelerationen –
+det som faktiskt känns i sätet. En snett monterad enhet visar alltså inte
+konstant utslag, och siffrorna (0,23 g, poängen, räknarna) stämmer oavsett hur
+den är vänd. Vid start står det kort "hittar lodlinjen" medan den ställer in sig.
 
-**Gas, broms och kurva avgörs av GPS-farten.** Rörelsesensorn kan aldrig veta
-vilket håll som är framåt utan att du berättar det, men farten vet det oavsett
-hur kortet är vänt. Utan GPS räknas därför alla hårda moment ihop till en enda
+Det som *inte* går att räkna ut av sig själv är **vilket håll som är framåt**.
+En accelerometer som ligger stilla kan omöjligt veta det – det finns ingen
+körriktning att observera när bilen står. Det märks bara på ett ställe: bubblans
+riktning. Innan kortet vet vilket håll som är framåt är bubblans **storlek**
+rätt men **riktningen godtycklig** – en inbromsning kan lika gärna kasta bubblan
+åt sidan som nedåt.
+
+Därför lär kortet sig riktningen medan du kör. Det jämför GPS-farten med
+accelerationen: ökar farten pekar accelerationen framåt, minskar den pekar den
+bakåt. Efter några gaspådrag och inbromsningar står riktningen, och då dyker
+etiketterna **GAS** och **BROMS** upp kring bubblan. Nedersta raden på
+ECODRIVE-skärmen berättar var den ligger:
+
+| Raden säger | Betyder |
+|---|---|
+| `Riktning: kräver GPS` | Ingen mottagare inkopplad – riktningen går inte att lära sig |
+| `Riktning: kör, gasa och bromsa` | GPS finns, men inlärningen har inte börjat |
+| `Riktning: lär sig 40%` | Pågår. Kör normalt, den blir bättre för varje inbromsning |
+| `Riktning: inlärd` | Klar. Broms = bubblan nedåt, högerkurva = bubblan åt vänster |
+
+Riktningen sparas i kortets flashminne när den satt sig, så nästa gång du
+startar är den redan inlärd.
+
+#### TARA – när du flyttat hållaren
+
+I **MENY** sitter knappen **TARA – STÅ STILL**. Den sparar hur kortet sitter
+just nu, och startar om inlärningen av framåtriktningen.
+
+Du behöver den inte för att komma igång – lutningen hittas ändå av sig själv
+inom en halv minut. Den är till för två saker:
+
+1. **Lodlinjen är rätt direkt vid start** i stället för efter en halv minut, så
+   att de första sekunderna av en resa också duger.
+2. **Riktningen lärs om från början** när du flyttat hållaren. Utan tara sitter
+   den gamla riktningen kvar och korrigeras bara långsamt.
+
+Tryck på knappen **medan bilen står stilla**. Rör sig kortet svarar den
+**STÅ STILL** och sparar ingenting – då är det inte tyngdkraften den skulle
+spara utan en manöver, och en felsparad lodlinje sitter kvar tills du tarar om.
+Under knappen står om ett läge finns sparat.
+
+#### Gas, broms och kurva avgörs av GPS-farten
+
+Räknarna delar upp de hårda momenten i gas, broms och kurva. Den uppdelningen
+görs på farten, inte på accelerometern, just för att den ska fungera oavsett hur
+kortet är vänt. Utan GPS räknas därför alla hårda moment ihop till en enda
 siffra, och skärmen säger rakt ut att uppdelningen inte går att göra – hellre
 det än att visa "hård inbromsning" när du faktiskt svängde.
 
@@ -190,6 +236,9 @@ först.
 | Mätområde G | ±2, ±4, ±8, ±16 g | ±8 g |
 | Mätområde gyro | ±64 … ±1024 grader/s | ±512 |
 | Släck skärm | aldrig, 15, 30, 60, 300 s | 30 s |
+
+Under listan sitter **TARA – STÅ STILL**, som sparar hur kortet är monterat –
+se [TARA](#tara--när-du-flyttat-hållaren).
 
 Inställningarna sparas i kortet och överlever strömavbrott.
 
@@ -347,9 +396,10 @@ position på flera rader, medan g-krafterna är färska på varje rad.
 
 ## Idéer att bygga vidare på
 
-- **Nollställning.** En knapp som drar bort den rådande lutningen, så att
-  loggen visar avvikelse i stället för absolut riktning.
-- **Toppvärden.** Högsta uppmätta g sedan start, kvar på skärmen.
+- **Uppkoppling.** WiFi-uppladdning till en egen server, så att data går att
+  följa medan mätningen pågår i stället för i efterhand.
+- **Sammanfattning per resa.** En rad per körning med sträcka, topp-g och poäng,
+  så att man ser utvecklingen över tid utan att öppna rådatan.
 
 ---
 

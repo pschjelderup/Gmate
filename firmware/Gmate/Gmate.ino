@@ -193,6 +193,22 @@ void onPressSettings(int16_t x, int16_t y) {
     return;
   }
 
+  if (ui::kBtnTare.contains(x, y)) {
+    // Taran sparar vilket hall som ar ned. Det gar bara nar kortet star stilla:
+    // under rorelse ar det inte tyngdkraften man skulle spara utan en manover,
+    // och da skulle lodlinjen bli fel for all framtid.
+    if (eco::tare()) {
+      ui::drawMessage("TARAT", "Monteringsläget är sparat.",
+                      "Riktningen lärs in när du kör.");
+    } else {
+      ui::drawMessage("STÅ STILL", "Kortet måste ligga stilla.",
+                      "Försök igen när bilen står.");
+    }
+    delay(1500);
+    lastDrawMs = 0;  // rita om direkt nar meddelandet slapper
+    return;
+  }
+
   if (ui::kBtnBack.contains(x, y)) screen = SCREEN_MAIN;
 }
 

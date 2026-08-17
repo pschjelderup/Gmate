@@ -163,7 +163,8 @@ const Rect kBtnTrack = {16, 338, 418, 64};
 const Rect kBtnSettings = {16, 410, 134, 48};
 const Rect kBtnEco = {158, 410, 134, 48};
 const Rect kBtnScreenOff = {300, 410, 134, 48};
-const Rect kBtnBack = {16, 496, 418, 72};
+const Rect kBtnTare = {16, 434, 418, 48};
+const Rect kBtnBack = {16, 512, 418, 72};
 
 const Rect kBtnEcoReset = {16, 528, 202, 56};
 const Rect kBtnEcoBack = {232, 528, 202, 56};
@@ -366,6 +367,19 @@ void drawSettings(const AppSettings &cfg) {
     printCentered(331, y + 26, 3, C_TEXT, values[row]);
   }
 
+  // --------------------------------------------------------------- tara ----
+  // Taran sparar hur kortet sitter just nu. Lutningen hittas visserligen av
+  // sig sjalv efter en halv minut, men med ett sparat lage ar lodlinjen ratt
+  // redan vid start - och framatriktningen lars om fran borjan, vilket ar det
+  // man vill nar hallaren flyttats.
+  const EcoStatus ec = eco::status();
+  drawButton(kBtnTare, C_ACCENT, "TARA - STÅ STILL", 2, C_BG);
+  if (ec.levelStored) {
+    printCentered(225, 488, 2, C_GREEN, "Monteringsläget är sparat");
+  } else {
+    printCentered(225, 488, 2, C_DIM, "Inget läge sparat ännu");
+  }
+
   drawButton(kBtnBack, C_GREEN, "KLAR", 4, C_TEXT);
   gfx->flush();
 }
@@ -433,6 +447,13 @@ void drawEco(const EcoStatus &e) {
   gfx->drawFastHLine(cx - rOuter, cy, rOuter * 2, RGB565(38, 46, 60));
   gfx->drawFastVLine(cx, cy - rOuter, rOuter * 2, RGB565(38, 46, 60));
 
+  // Etiketterna satts ut forst nar kortet vet vilket hall som ar framat.
+  // Innan dess vore de en gissning, och en felmarkt axel ar samre an ingen.
+  if (e.forwardKnown) {
+    printCentered(cx, cy - rOuter - 22, 2, C_DIM, "GAS");
+    printCentered(cx, cy + rOuter + 6, 2, C_DIM, "BROMS");
+  }
+
   if (e.levelled) {
     // Toppvardet lamnas kvar som en ring, sa att man ser hur hart det blev
     // aven nar bubblan hunnit tillbaka till mitten.
@@ -462,26 +483,39 @@ void drawEco(const EcoStatus &e) {
   }
 
   // ------------------------------------------------------------- raknare --
-  const Rect box = {16, 440, 418, 78};
+  const Rect box = {16, 440, 418, 82};
   drawPanel(box, C_PANEL);
 
   if (e.gpsClassify) {
-    snprintf(buf, sizeof(buf), "Gas %lu   Broms %lu   Kurva %lu",
+    snprintf(buf, sizeof(buf), "Hårt: gas %lu  broms %lu  kurva %lu",
              (unsigned long)e.hardAccel, (unsigned long)e.hardBrake,
              (unsigned long)e.hardTurn);
-    printCentered(225, 452, 2, C_TEXT, buf);
-    printCentered(225, 478, 2, C_DIM, "hårda moment sedan nollställning");
+    printCentered(225, 450, 2, C_TEXT, buf);
   } else {
-    snprintf(buf, sizeof(buf), "%lu hårda moment",
-             (unsigned long)e.hardTotal);
-    printCentered(225, 452, 2, C_TEXT, buf);
     // Utan GPS gar det inte att veta om ett ryck var gas, broms eller kurva.
     // Da sags det rakt ut i stallet for att gissa.
-    printCentered(225, 478, 2, C_DIM, "utan GPS: ingen uppdelning");
+    snprintf(buf, sizeof(buf), "%lu hårda moment (ingen GPS)",
+             (unsigned long)e.hardTotal);
+    printCentered(225, 450, 2, C_TEXT, buf);
   }
 
   snprintf(buf, sizeof(buf), "Topp %.2f g", e.peakG);
-  printCentered(225, 500, 2, C_ACCENT, buf);
+  printCentered(225, 472, 2, C_ACCENT, buf);
+
+  // Raden om riktningen ar det enda stallet dar man far veta om bubblan pekar
+  // at ratt hall eller bara har ratt storlek. Utan den skulle en godtyckligt
+  // vand bubbla se precis lika trovardig ut som en inlard.
+  if (e.forwardKnown && e.forwardQuality >= 0.99f) {
+    printCentered(225, 494, 2, C_GREEN, "Riktning: inlärd");
+  } else if (e.forwardKnown) {
+    snprintf(buf, sizeof(buf), "Riktning: lär sig %d%%",
+             (int)(e.forwardQuality * 100.0f + 0.5f));
+    printCentered(225, 494, 2, C_WARN, buf);
+  } else if (e.forwardNeedsGnss) {
+    printCentered(225, 494, 2, C_DIM, "Riktning: kräver GPS");
+  } else {
+    printCentered(225, 494, 2, C_DIM, "Riktning: kör, gasa och bromsa");
+  }
 
   // ------------------------------------------------------------ knappar ---
   drawButton(kBtnEcoReset, C_PANEL, "NOLLSTÄLL", 2, C_TEXT);
