@@ -140,20 +140,30 @@ och ju häftigare ändringen är, desto mer går åt. Därför går sparsamhet a
 med enbart rörelsesensorn, utan att veta någonting om motorn.
 
 **Bubblan** är ett vattenpass baklänges: den ska stå still i mitten. Ju hårdare
-du kör, desto längre ut vandrar den. Ringarna är 0,1 g var, och färgen följer
-med:
+du kör, desto längre ut vandrar den. Två av ringarna är dina gränser – den
+gröna är den mjuka, den orange den hårda – och de flyttar sig när du ändrar dem
+i [GRÄNSER](#gränser--ställ-in-medan-du-kör). Färgen följer med:
 
 | Färg | Betyder |
 |---|---|
-| Grön | Under 0,15 g – mjukt, så mycket man knappt tänker på |
-| Gul | 0,15–0,30 g – märks i sätet |
-| Röd | Över 0,30 g – passagerarna tittar upp |
+| Grön | Under mjuka gränsen (0,15 g) – så mycket man knappt tänker på |
+| Gul | Mellan gränserna – märks i sätet |
+| Röd | Över hårda gränsen (0,30 g) – passagerarna tittar upp |
 
-Den orange ringen är **högsta värdet sedan nollställning**. Den ligger kvar så
-att du ser hur hårt det blev även när bubblan hunnit tillbaka till mitten.
+Ringarna i bubblan betyder tre olika saker:
+
+| Ring | Betyder |
+|---|---|
+| Grön | Mjuka gränsen – här börjar det kosta poäng |
+| Röd | Hårda gränsen – här räknas det som ett hårt moment |
+| Lila | Högsta värdet sedan nollställning |
+
+Den lila ligger kvar så att du ser hur hårt det blev även när bubblan hunnit
+tillbaka till mitten.
 
 **Poängen** uppe till höger är 0–100 och lever hela tiden. Den sjunker när du
-går över 0,15 g och återhämtar sig med drygt en poäng per sekund mjuk körning.
+går över mjuka gränsen och återhämtar sig med drygt en poäng per sekund mjuk
+körning.
 Under siffran står ett omdöme: UTMÄRKT, BRA, OK, HACKIGT eller HÅRT.
 
 **Räknarna** längst ned visar antal hårda moment sedan du nollställde, uppdelat
@@ -162,7 +172,8 @@ med att lära sig vilket håll som är framåt** – se
 [Var får den sitta?](#var-får-den-sitta) nedan.
 
 **NOLLSTÄLL** nollar poäng, toppvärde och räknare – lämpligt vid varje ny resa.
-**TILLBAKA** går till huvudskärmen. Skärmen släcks aldrig av sig själv i
+**GRÄNSER** öppnar inställningarna, se nedan. **TILLBAKA** går till
+huvudskärmen. Skärmen släcks aldrig av sig själv i
 eco-läget; den är till för att tittas på.
 
 Poängen räknas **hela tiden**, även när skärmen visar något annat eller är
@@ -175,6 +186,17 @@ mätvärdena och räknas bort, så det som blir kvar är den vågräta accelerat
 det som faktiskt känns i sätet. En snett monterad enhet visar alltså inte
 konstant utslag, och siffrorna (0,23 g, poängen, räknarna) stämmer oavsett hur
 den är vänd. Vid start står det kort "hittar lodlinjen" medan den ställer in sig.
+
+**Flyttar du hållaren rättar den till sig själv.** När kortet ligger stilla –
+vilket avgörs av gyrot – lär den om lodlinjen inom ett par sekunder. Du behöver
+alltså inte tara bara för att du flyttat den; taran är till för att slippa vänta
+de sekunderna och för att starta om riktningsinlärningen.
+
+**Sensorns egen skala spelar ingen roll.** Visar din enhet 0,89 g i stillhet i
+stället för 1,00 är det en förskjutning i själva sensorn. Ecodrive räknar allt
+som *andel* av den uppmätta tyngdkraften, så gränserna hamnar rätt ändå. Loggen
+skriver däremot alltid råvärdena, oförändrade – det är rådata och ska förbli
+det.
 
 Det som *inte* går att räkna ut av sig själv är **vilket håll som är framåt**.
 En accelerometer som ligger stilla kan omöjligt veta det – det finns ingen
@@ -225,9 +247,30 @@ kortet är vänt. Utan GPS räknas därför alla hårda moment ihop till en enda
 siffra, och skärmen säger rakt ut att uppdelningen inte går att göra – hellre
 det än att visa "hård inbromsning" när du faktiskt svängde.
 
-Trösklarna ligger överst i `firmware/Gmate/config.h` och är satta efter hur det
-känns i bilen. Tycker du att den är för sträng eller för slapp är det de
-värdena du ska ändra.
+#### GRÄNSER – ställ in medan du kör
+
+Knappen **GRÄNSER** på ECODRIVE-skärmen öppnar en egen meny med fyra rattar.
+Den går att öppna **även under pågående loggning**, till skillnad från
+huvudmenyn – gränserna påverkar bara hur skärmen bedömer körningen, aldrig vad
+som hamnar i loggfilen, så det finns ingen fil som kan bli inkonsekvent.
+
+| Ratt | Vad den gör | Standard |
+|---|---|---|
+| Mjuk gräns | Här börjar det kosta poäng | 0,15 g |
+| Hård gräns | Här räknas det som ett hårt moment | 0,30 g |
+| Ytterring | Vad bubblans ytterkant motsvarar | 0,40 g |
+| Stränghet | Poäng som dras per g och sekund över mjuka gränsen | 40 |
+
+Uppe till höger står det levande värdet medan du skruvar, så du ser vad du
+faktiskt kör med i stället för att gissa. Valet sparas och överlever
+strömavbrott.
+
+Sätt **ytterringen** efter hur du kör: 0,4 g fyller bubblan vid ganska rask
+körning, 0,8 g behövs om du vill se topparna på en kurvig väg utan att bubblan
+slår i kanten hela tiden.
+
+Startvärdena ligger kvar överst i `firmware/Gmate/config.h`, tillsammans med
+listorna över vad menyn erbjuder.
 
 ### Menyn
 
@@ -354,6 +397,7 @@ med en USB-mätare på din egen uppsättning innan du litar på en tvåveckorsk�
 | Knapptryck hamnar fel på skärmen | Öppna `firmware/Gmate/config.h` och sätt `TOUCH_FLIP_X` eller `TOUCH_FLIP_Y` till `1` |
 | Datorn hittar ingen port | Håll **BOOT**, tryck **RESET**, släpp BOOT. Prova en annan kabel |
 | Loggningen stannade av sig själv | Kortet blev fullt. Den stoppar med flit i stället för att skriva sönder filen |
+| ECODRIVE visar hårt fast enheten ligger still | Skulle inte kunna hända längre. Händer det ändå: tryck **TARA** i menyn medan den står stilla, och hör av dig – det är ett fel |
 | Kortet beter sig som den gamla versionen efter flashning | Jämför versionsraden på flashsidan med den i **MENY**. Visar sidan fel version har webbläsaren sparat en gammal kopia av sidan – ladda om med `Ctrl`+`F5` (`Cmd`+`Shift`+`R` på Mac) |
 
 ---

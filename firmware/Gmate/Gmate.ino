@@ -33,8 +33,10 @@ TouchDrvFT6X36 touch;
 bool touchOk = false;
 
 Preferences prefs;
-AppSettings cfg = {DEFAULT_RATE_INDEX, DEFAULT_ACCEL_RANGE_INDEX,
-                   DEFAULT_GYRO_RANGE_INDEX, DEFAULT_SCREEN_TIMEOUT_INDEX};
+AppSettings cfg = {DEFAULT_RATE_INDEX,        DEFAULT_ACCEL_RANGE_INDEX,
+                   DEFAULT_GYRO_RANGE_INDEX,  DEFAULT_SCREEN_TIMEOUT_INDEX,
+                   DEFAULT_ECO_SOFT_INDEX,    DEFAULT_ECO_HARD_INDEX,
+                   DEFAULT_ECO_BUBBLE_INDEX,  DEFAULT_ECO_PENALTY_INDEX};
 
 Screen screen = SCREEN_MAIN;
 bool screenOn = true;
@@ -51,6 +53,10 @@ void loadSettings() {
   cfg.accelIdx = prefs.getUChar("accel", DEFAULT_ACCEL_RANGE_INDEX);
   cfg.gyroIdx = prefs.getUChar("gyro", DEFAULT_GYRO_RANGE_INDEX);
   cfg.screenIdx = prefs.getUChar("screen", DEFAULT_SCREEN_TIMEOUT_INDEX);
+  cfg.ecoSoftIdx = prefs.getUChar("ecoSoft", DEFAULT_ECO_SOFT_INDEX);
+  cfg.ecoHardIdx = prefs.getUChar("ecoHard", DEFAULT_ECO_HARD_INDEX);
+  cfg.ecoBubbleIdx = prefs.getUChar("ecoBub", DEFAULT_ECO_BUBBLE_INDEX);
+  cfg.ecoPenaltyIdx = prefs.getUChar("ecoPen", DEFAULT_ECO_PENALTY_INDEX);
   prefs.end();
 
   // Ett trasigt eller gammalt sparat varde far inte gora appen obrukbar.
@@ -60,6 +66,14 @@ void loadSettings() {
   if (cfg.screenIdx >= kScreenTimeoutCount) {
     cfg.screenIdx = DEFAULT_SCREEN_TIMEOUT_INDEX;
   }
+  if (cfg.ecoSoftIdx >= kEcoSoftCount) cfg.ecoSoftIdx = DEFAULT_ECO_SOFT_INDEX;
+  if (cfg.ecoHardIdx >= kEcoHardCount) cfg.ecoHardIdx = DEFAULT_ECO_HARD_INDEX;
+  if (cfg.ecoBubbleIdx >= kEcoBubbleCount) {
+    cfg.ecoBubbleIdx = DEFAULT_ECO_BUBBLE_INDEX;
+  }
+  if (cfg.ecoPenaltyIdx >= kEcoPenaltyCount) {
+    cfg.ecoPenaltyIdx = DEFAULT_ECO_PENALTY_INDEX;
+  }
 }
 
 void saveSettings() {
@@ -68,12 +82,19 @@ void saveSettings() {
   prefs.putUChar("accel", cfg.accelIdx);
   prefs.putUChar("gyro", cfg.gyroIdx);
   prefs.putUChar("screen", cfg.screenIdx);
+  prefs.putUChar("ecoSoft", cfg.ecoSoftIdx);
+  prefs.putUChar("ecoHard", cfg.ecoHardIdx);
+  prefs.putUChar("ecoBub", cfg.ecoBubbleIdx);
+  prefs.putUChar("ecoPen", cfg.ecoPenaltyIdx);
   prefs.end();
 }
 
 void applySettings() {
   logger::setRate(kRates[cfg.rateIdx]);
   logger::setRanges(kAccelRanges[cfg.accelIdx], kGyroRanges[cfg.gyroIdx]);
+  eco::setLimits(kEcoSoft[cfg.ecoSoftIdx], kEcoHard[cfg.ecoHardIdx],
+                 kEcoBubble[cfg.ecoBubbleIdx],
+                 kEcoPenalty[cfg.ecoPenaltyIdx]);
 }
 
 // -------------------------------------------------------- skarm av och pa --
@@ -156,7 +177,47 @@ void onPressEco(int16_t x, int16_t y) {
     eco::reset();
     return;
   }
+  if (ui::kBtnEcoLimits.contains(x, y)) {
+    screen = SCREEN_ECO_LIMITS;
+    return;
+  }
   if (ui::kBtnEcoBack.contains(x, y)) screen = SCREEN_MAIN;
+}
+
+// Granserna gar att andra aven under pagaende loggning, till skillnad fran
+// huvudmenyn. De paverkar bara hur skarmen bedomer korningen - loggens innehall
+// ar detsamma oavsett var de star, sa det finns ingen fil som kan bli
+// inkonsekvent.
+void onPressEcoLimits(int16_t x, int16_t y) {
+  for (uint8_t row = 0; row < 4; row++) {
+    const bool minus = ui::settingsMinus(row).contains(x, y);
+    const bool plus = ui::settingsPlus(row).contains(x, y);
+    if (!minus && !plus) continue;
+
+    uint8_t *value = nullptr;
+    uint8_t count = 0;
+    switch (row) {
+      case 0: value = &cfg.ecoSoftIdx; count = kEcoSoftCount; break;
+      case 1: value = &cfg.ecoHardIdx; count = kEcoHardCount; break;
+      case 2: value = &cfg.ecoBubbleIdx; count = kEcoBubbleCount; break;
+      case 3: value = &cfg.ecoPenaltyIdx; count = kEcoPenaltyCount; break;
+    }
+    if (!value) continue;
+
+    if (minus && *value > 0) {
+      (*value)--;
+    } else if (plus && *value + 1 < count) {
+      (*value)++;
+    } else {
+      return;
+    }
+
+    applySettings();
+    saveSettings();
+    return;
+  }
+
+  if (ui::kBtnBack.contains(x, y)) screen = SCREEN_ECO;
 }
 
 void onPressSettings(int16_t x, int16_t y) {
@@ -234,6 +295,8 @@ void handleTouch() {
         onPressMain(x, y);
       } else if (screen == SCREEN_ECO) {
         onPressEco(x, y);
+      } else if (screen == SCREEN_ECO_LIMITS) {
+        onPressEcoLimits(x, y);
       } else {
         onPressSettings(x, y);
       }
@@ -300,6 +363,7 @@ void loop() {
   // aldrig av sig sjalv.
   const uint16_t timeout = kScreenTimeouts[cfg.screenIdx];
   if (screenOn && timeout > 0 && logger::isLogging() && screen != SCREEN_ECO &&
+      screen != SCREEN_ECO_LIMITS &&
       millis() - lastActivityMs > (uint32_t)timeout * 1000UL) {
     setScreen(false);
   }
@@ -311,6 +375,8 @@ void loop() {
                    logger::estimateSecondsLeft(), logger::nowString());
     } else if (screen == SCREEN_ECO) {
       ui::drawEco(eco::status());
+    } else if (screen == SCREEN_ECO_LIMITS) {
+      ui::drawEcoLimits(cfg, eco::status());
     } else {
       ui::drawSettings(cfg);
     }

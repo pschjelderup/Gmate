@@ -15,12 +15,28 @@ Preferences g_prefs;
 EcoStatus g_status = {};
 
 // ---- lodlinjen ------------------------------------------------------------
-// Tyngdkraftens riktning, framplockad ur accelerationen. Filtret uppdateras
-// inte under manover: annars skulle en lang kurva sakta tolkas som "ned" och
-// bubblan sjunka tillbaka mot mitten fast bilen fortfarande ligger i kurvan.
+// Tyngdkraften, framplockad ur accelerationen. Vektorn behaller sin uppmatta
+// langd; den ar kortets egen bild av vad 1 g ar, och all vagrat acceleration
+// mats som andel av den. En sensor som visar 0,89 g i vila far darmed rätta
+// granser anda.
+//
+// Filtret uppdateras inte under manover: annars skulle en lang kurva sakta
+// tolkas som "ned" och bubblan sjunka tillbaka mot mitten fast bilen
+// fortfarande ligger i kurvan. Frysningen ar tidsbegransad - se nedan.
 float g_gx = 0, g_gy = 0, g_gz = 0;
 bool g_haveGravity = false;
 bool g_settled = false;
+
+// Hur lange filtret statt fryst i strack, och om taket natts. Utan taket
+// ravar frysningen sig sjalv: villkoret raknas fram ur lodlinjen, sa en
+// lodlinje som en gang blivit fel haller sig fryst - och darmed fel - for
+// alltid.
+float g_freezeS = 0;
+bool g_freezeCapped = false;
+
+// Foregaende rada avlasning, for att se om vektorn ligger still.
+float g_prevAx = 0, g_prevAy = 0, g_prevAz = 0;
+bool g_havePrevA = false;
 
 // ---- framatriktningen -----------------------------------------------------
 // Enhetsvektor i vagplanet. Lars in genom att jamfora accelerometerns riktning
@@ -39,6 +55,15 @@ float g_peak = 0;
 float g_prevMagG = 0;
 
 bool g_inEvent = false;
+
+// ---- granserna ------------------------------------------------------------
+// Ligger i variabler i stallet for i konstanter sa att de gar att andra fran
+// gransmenyn medan bilen rullar. Startvardena ar de ur config.h.
+float g_softG = ECO_SOFT_G;
+float g_hardG = ECO_HARD_G;
+float g_clearG = ECO_CLEAR_G;
+float g_bubbleG = ECO_BUBBLE_FULL_G;
+float g_penalty = ECO_PENALTY_PER_G_S;
 
 // Taran utfors av avlasningstraden, inte av den som trycker pa knappen. Annars
 // skulle lodlinjen skrivas fran tva hall samtidigt, mitt i en filtrering.
@@ -158,6 +183,28 @@ void begin() {
   loadCalibration();
   lock();
   g_status.score = 100.0f;
+  // Sa att skarmen har vettiga varden att rita med aven innan installningarna
+  // hunnit tillampas. En nolla har hade blivit en division med noll.
+  g_status.softG = g_softG;
+  g_status.hardG = g_hardG;
+  g_status.bubbleG = g_bubbleG;
+  unlock();
+}
+
+void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs) {
+  lock();
+  g_softG = softG;
+  // Den harda gransen maste ligga over den mjuka, annars skulle ett varde
+  // kunna vara bade mjukt och hart samtidigt.
+  g_hardG = hardG > softG ? hardG : softG + 0.01f;
+  // Avslutning tva tredjedelar ned mot den mjuka gransen. Det ar det glapp
+  // som hindrar ett studsande varde fran att raknas som flera handelser.
+  g_clearG = g_softG + (g_hardG - g_softG) * 0.67f;
+  g_bubbleG = bubbleG;
+  g_penalty = penaltyPerGs;
+  g_status.softG = g_softG;
+  g_status.hardG = g_hardG;
+  g_status.bubbleG = g_bubbleG;
   unlock();
 }
 
@@ -218,6 +265,30 @@ void tick(const Sample &s) {
   updateSpeed();
   const float gpsLongG = gpsLongitudinalG();
 
+  // ---- ligger kortet stilla? ----------------------------------------------
+  // Det har avgors av gyrot och av att den rada vektorn star still, aldrig av
+  // nagot som raknats fram ur lodlinjen. Det ar hela poangen: bedomningen
+  // maste komma utifran, annars kan en felaktig lodlinje intyga sin egen
+  // riktighet.
+  //
+  // Gyrot skiljer de tva fall som annars ser likadana ut for accelerometern:
+  // en bil i jamn kurva har stor sidoacceleration och tydlig girhastighet,
+  // ett kort som ligger snett pa ett bord har lika stor utslag men star helt
+  // stilla.
+  const float gyroMag =
+      sqrtf(s.gx * s.gx + s.gy * s.gy + s.gz * s.gz);
+  float jitter = 0;
+  if (g_havePrevA) {
+    jitter = fabsf(s.ax - g_prevAx) + fabsf(s.ay - g_prevAy) +
+             fabsf(s.az - g_prevAz);
+  }
+  g_prevAx = s.ax;
+  g_prevAy = s.ay;
+  g_prevAz = s.az;
+  const bool atRest = g_havePrevA && gyroMag < ECO_REST_GYRO_DPS &&
+                      jitter < ECO_REST_JITTER_G;
+  g_havePrevA = true;
+
   // ---- lodlinjen ----------------------------------------------------------
   if (!g_haveGravity) {
     g_gx = s.ax;
@@ -225,20 +296,42 @@ void tick(const Sample &s) {
     g_gz = s.az;
     g_haveGravity = true;
   } else {
-    // Under manover star filtret still. Vardet fran forra varvet duger som
-    // matt pa om det pagar nagot - det andras inte sa fort.
+    // Vardet fran forra varvet duger som matt pa om det pagar en manover -
+    // det andras inte sa fort.
     const bool manoeuvring = g_prevMagG > ECO_FREEZE_MAG_G ||
                              fabsf(gpsLongG) > ECO_FREEZE_LONG_G;
-    if (!manoeuvring) {
-      const float tau =
-          g_settled ? ECO_GRAVITY_TAU_SLOW_S : ECO_GRAVITY_TAU_FAST_S;
+
+    float tau = ECO_GRAVITY_TAU_SLOW_S;
+    bool frozen = false;
+
+    if (atRest) {
+      // Ligger kortet stilla ar den uppmatta vektorn tyngdkraften, per
+      // definition. Da finns ingen anledning till forsiktighet - las in den
+      // snabbt. Det ar ocksa detta som gor att man kan flytta hallaren och fa
+      // ratt lodlinje inom nagra sekunder utan att rora en knapp.
+      tau = ECO_GRAVITY_TAU_FAST_S;
+      g_freezeS = 0;
+      g_freezeCapped = false;
+      g_settled = true;
+    } else if (!manoeuvring) {
+      g_freezeS = 0;
+      g_freezeCapped = false;
+      if (!g_settled && millis() - g_startMs > 5000) g_settled = true;
+    } else if (!g_freezeCapped) {
+      frozen = true;
+      g_freezeS += dt;
+      if (g_freezeS >= ECO_FREEZE_MAX_S) g_freezeCapped = true;
+    }
+    // Nar taket natts slapper frysningen och den langsamma tidskonstanten far
+    // ta over. Langsam uppdatering ar sammare an ingen alls under en riktig
+    // kurva, men oandligt mycket battre an en lodlinje som sitter fast fel.
+
+    if (!frozen) {
       float k = dt / tau;
       if (k > 1.0f) k = 1.0f;
       g_gx += (s.ax - g_gx) * k;
       g_gy += (s.ay - g_gy) * k;
       g_gz += (s.az - g_gz) * k;
-
-      if (!g_settled && millis() - g_startMs > 5000) g_settled = true;
     }
   }
 
@@ -254,11 +347,18 @@ void tick(const Sample &s) {
   }
 
   // ---- rakna bort tyngdkraften -------------------------------------------
+  // Resultatet uttrycks som andel av den uppmatta tyngdkraften, inte i
+  // sensorns absoluta g. Visar sensorn 0,89 g i vila ar 0,89 dess bild av
+  // 1 g, och da ska granserna raknas mot 0,89 - annars slar de in for sent i
+  // precis den utstrackning sensorn ar felkalibrerad. Kvoten ar dessutom
+  // oberoende av matomradet, sa granserna betyder samma sak vid +/-2 g som
+  // vid +/-16 g.
   const float dx = g_gx / gMag, dy = g_gy / gMag, dz = g_gz / gMag;
   const float along = s.ax * dx + s.ay * dy + s.az * dz;
-  const float hx = s.ax - along * dx;
-  const float hy = s.ay - along * dy;
-  const float hz = s.az - along * dz;
+  const float inv = 1.0f / gMag;
+  const float hx = (s.ax - along * dx) * inv;
+  const float hy = (s.ay - along * dy) * inv;
+  const float hz = (s.az - along * dz) * inv;
   const float magG = sqrtf(hx * hx + hy * hy + hz * hz);
   g_prevMagG = magG;
 
@@ -267,11 +367,16 @@ void tick(const Sample &s) {
   const bool wantTare = g_tarePending;
   unlock();
   if (wantTare) {
-    // Star kortet stilla ar all kvarvarande vagrat acceleration brus. Ror det
-    // sig ar det en manover, och den far inte sparas som lodlinje.
-    const bool ok = magG < 0.05f;
+    // Vilan bedoms av gyrot, inte av magG. Att fraga magG vore att fraga
+    // lodlinjen om lodlinjen ar ratt: har den blivit fel ar magG stort, och
+    // da skulle taran - det enda som kan rata till den - vagra kora.
+    const bool ok = atRest;
     if (ok) {
-      normalize3(g_gx, g_gy, g_gz);
+      // Vektorn satts till den uppmatta, med langd och allt. Langden ar
+      // kortets referens for 1 g och far inte skalas bort.
+      g_gx = s.ax;
+      g_gy = s.ay;
+      g_gz = s.az;
       g_settled = true;
 
       // Framatriktningen gar inte att lara ut nu - stillastaende finns inget
@@ -369,8 +474,13 @@ void tick(const Sample &s) {
   }
 
   // ---- poang --------------------------------------------------------------
-  if (magG > ECO_SOFT_G) {
-    g_score -= (magG - ECO_SOFT_G) * ECO_PENALTY_PER_G_S * dt;
+  lock();
+  const float softG = g_softG, hardG = g_hardG, clearG = g_clearG;
+  const float penalty = g_penalty;
+  unlock();
+
+  if (magG > softG) {
+    g_score -= (magG - softG) * penalty * dt;
   } else {
     g_score += ECO_RECOVERY_PER_S * dt;
   }
@@ -381,7 +491,7 @@ void tick(const Sample &s) {
 
   // ---- handelser ----------------------------------------------------------
   uint32_t addAccel = 0, addBrake = 0, addTurn = 0, addTotal = 0;
-  if (!g_inEvent && magG >= ECO_HARD_G) {
+  if (!g_inEvent && magG >= hardG) {
     g_inEvent = true;
     if (g_haveSpeed) {
       // Farten avgor vad handelsen var. Det kraver ingen kunskap om hur
@@ -397,7 +507,7 @@ void tick(const Sample &s) {
     } else {
       addTotal = 1;
     }
-  } else if (g_inEvent && magG < ECO_CLEAR_G) {
+  } else if (g_inEvent && magG < clearG) {
     g_inEvent = false;
   }
 
@@ -417,6 +527,10 @@ void tick(const Sample &s) {
   g_status.hardTurn += addTurn;
   g_status.hardTotal += addTotal;
   g_status.elapsedS = (millis() - g_startMs) / 1000;
+  g_status.atRest = atRest;
+  g_status.softG = softG;
+  g_status.hardG = hardG;
+  g_status.bubbleG = g_bubbleG;
   unlock();
 }
 

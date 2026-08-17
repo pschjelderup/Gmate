@@ -85,16 +85,52 @@
 // Vad ytterringen i bubblan motsvarar.
 #define ECO_BUBBLE_FULL_G 0.40f
 
-// Tidskonstanter for att hitta tyngdkraften. Den snabba anvands bara tills
-// lodlinjen hittats forsta gangen; darefter tar den langsamma over, sa att en
+// Vardena ovan ar startvarden. De gar att andra i gransmenyn medan bilen
+// rullar, och valet sparas. Listorna nedan ar vad man kan valja mellan.
+static const float kEcoSoft[] = {0.08f, 0.10f, 0.12f, 0.15f,
+                                 0.18f, 0.20f, 0.25f, 0.30f};
+static const uint8_t kEcoSoftCount = 8;
+#define DEFAULT_ECO_SOFT_INDEX 3  // 0,15 g
+
+static const float kEcoHard[] = {0.20f, 0.25f, 0.30f, 0.35f,
+                                 0.40f, 0.50f, 0.60f};
+static const uint8_t kEcoHardCount = 7;
+#define DEFAULT_ECO_HARD_INDEX 2  // 0,30 g
+
+static const float kEcoBubble[] = {0.20f, 0.30f, 0.40f, 0.50f, 0.60f, 0.80f};
+static const uint8_t kEcoBubbleCount = 6;
+#define DEFAULT_ECO_BUBBLE_INDEX 2  // 0,40 g
+
+// Hur hart poangen straffar. Lag siffra ger en snall matare, hog en strang.
+static const float kEcoPenalty[] = {10.0f, 20.0f, 40.0f, 60.0f, 90.0f};
+static const uint8_t kEcoPenaltyCount = 5;
+#define DEFAULT_ECO_PENALTY_INDEX 2  // 40
+
+// Tidskonstanter for att hitta tyngdkraften. Den snabba anvands nar kortet
+// ligger stilla - da ar den uppmatta vektorn tyngdkraften och det finns ingen
+// anledning att vara forsiktig. Den langsamma anvands under fard, sa att en
 // utdragen kurva inte hinner tolkas som "ned".
 #define ECO_GRAVITY_TAU_FAST_S 2.0f
 #define ECO_GRAVITY_TAU_SLOW_S 30.0f
+
+// Sa har stilla maste det vara for att raknas som vila. Gyrot ar det som
+// avgor: en bil i en jamn kurva har stor sidoacceleration men ocksa en tydlig
+// girhastighet, medan ett kort som ligger pa ett bord har ingen alls.
+#define ECO_REST_GYRO_DPS 2.5f
+
+// ... och sa lite far accelerationsvektorn andra sig mellan tva avlasningar.
+#define ECO_REST_JITTER_G 0.04f
 
 // Under manover uppdateras lodlinjen inte alls. Det ar det som gor att en lang
 // avfart eller rondell far behalla sitt varde i stallet for att sjunka undan.
 #define ECO_FREEZE_MAG_G 0.12f
 #define ECO_FREEZE_LONG_G 0.06f
+
+// Men aldrig langre an sa har. Frysningen avgors av ett varde som raknas fram
+// ur lodlinjen, sa en felaktig lodlinje kan halla sig sjalv fryst i all
+// evighet om den slapps los. En riktig kurva varar inte tolv sekunder; en
+// felaktig lodlinje varar tills stromen bryts.
+#define ECO_FREEZE_MAX_S 12.0f
 
 // Sa mycket maste hanna for att en handelse ska duga till att lara ut vilket
 // hall som ar framat. Under detta ar bruset for stort for att lita pa.
