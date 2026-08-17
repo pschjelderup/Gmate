@@ -39,6 +39,19 @@ Stämmer de två överens gick flashningen igenom.
 Hittar datorn ingen port: håll inne **BOOT**, tryck och släpp **RESET**, släpp
 sedan BOOT. Då lägger sig kortet i ett läge där det alltid går att flasha.
 
+### Behöver jag kryssa i *Erase device*?
+
+**Nej.** Firmwaren skrivs i två delar med ett hål emellan, precis där kortet
+sparar sina inställningar. Följande överlever varje omflashning:
+
+- Loggfrekvens, mätområden och skärmtimeout
+- Ecodrive-gränserna och poängfönstret
+- Tarat monteringsläge
+- Inlärd framåtriktning
+
+Kryssa i den bara när du **vill** börja om från noll – då raderas hela kortet
+och allt står på fabriksinställning efter omstart.
+
 ### Engångsinställning innan flashsidan fungerar
 
 Flashsidan ligger på GitHub Pages, och det behöver slås på en gång:
