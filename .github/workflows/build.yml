@@ -67,9 +67,14 @@ jobs:
           BOOT_APP0=$(find "$HOME/.arduino15/packages/esp32" -name boot_app0.bin | head -1)
           echo "boot_app0: $BOOT_APP0"
 
+          # Filnamnet innehaller byggets id. Ett fast namn som gmate-merged.bin
+          # ar samma adress for evigt, och en webblasare eller ett mellanlager
+          # som en gang hamtat den filen har ingen anledning att hamta om den -
+          # da flashas gammal firmware fran cachen hur mycket vi an bygger om.
+          # Med ett nytt namn per bygge kan det inte intraffa.
           mkdir -p site
           python3 -m esptool --chip esp32s3 merge_bin \
-            -o site/gmate-merged.bin \
+            -o "site/gmate-${GITHUB_SHA::7}.bin" \
             --flash_mode dio \
             --flash_freq 80m \
             --flash_size 16MB \
@@ -82,10 +87,21 @@ jobs:
 
       - name: Bygg flashsidan
         run: |
-          cp web/index.html site/index.html
           VERSION="${GITHUB_SHA::7}"
-          sed "s/__VERSION__/$VERSION/g" web/manifest.json > site/manifest.json
+          BUILT=$(date -u '+%Y-%m-%d %H:%M UTC')
+          for f in index.html manifest.json; do
+            sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUILT__/$BUILT/g" \
+              "web/$f" > "site/$f"
+          done
+          echo "--- manifest.json ---"
           cat site/manifest.json
+          # Ett stavfel i en platshallare skulle annars ge en sida som ser hel
+          # ut men laddar ner en fil som inte finns.
+          if grep -q '__VERSION__\|__BUILT__' site/index.html site/manifest.json; then
+            echo "FEL: platshallare kvar i den publicerade sidan" >&2
+            exit 1
+          fi
+          test -f "site/gmate-$VERSION.bin"
 
       - name: Spara firmware som nedladdningsbar artefakt
         # Ett fullt lagringsutrymme for artefakter ar ett kontoproblem, inte
@@ -94,8 +110,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: gmate-firmware
-          path: site/gmate-merged.bin
+          name: gmate-firmware-${{ github.sha }}
+          path: site/gmate-*.bin
           if-no-files-found: error
           retention-days: 7
 
