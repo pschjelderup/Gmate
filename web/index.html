@@ -136,6 +136,22 @@
       </div>
 
       <div class="card">
+        <h2>Om <em>Erase device</em></h2>
+        <p class="note">
+          Du behöver <strong>inte</strong> kryssa i den. Firmwaren skrivs i två
+          delar med ett hål emellan, precis där kortet sparar sina
+          inställningar &ndash; loggfrekvens, ecodrive-gränser, tarat
+          monteringsläge och inlärd framåtriktning. De överlever alltså varje
+          omflashning.
+        </p>
+        <p class="note">
+          Kryssa i den bara när du <em>vill</em> börja om från noll. Då raderas
+          hela kortet, och allt är tillbaka på fabriksinställningarna efter
+          omstart.
+        </p>
+      </div>
+
+      <div class="card">
         <h2>Får du en gammal version?</h2>
         <p class="note">
           Kontrollera versionsraden vid knappen och jämför med senaste
@@ -171,14 +187,21 @@
           return r.json();
         })
         .then((m) => {
-          const fil = m.builds[0].parts[0].path;
           const rad = document.getElementById("version");
           rad.innerHTML = "";
-          rad.append("Installerar version " + m.version + " · byggd " + m.built + " · ");
-          const lank = document.createElement("a");
-          lank.href = fil;
-          lank.textContent = fil;
-          rad.append(lank);
+          rad.append("Installerar version " + m.version + " · byggd " + m.built);
+          // Filerna listas var for sig. Att de ar tva ar inte en detalj: halet
+          // mellan dem ar det som gor att installningar och tara overlever en
+          // omflashning.
+          const lista = document.createElement("div");
+          m.builds[0].parts.forEach((del, i) => {
+            if (i) lista.append(" · ");
+            const lank = document.createElement("a");
+            lank.href = del.path;
+            lank.textContent = del.path;
+            lista.append(lank);
+          });
+          rad.append(lista);
         })
         .catch(() => {
           const rad = document.getElementById("version");

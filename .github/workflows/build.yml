@@ -58,7 +58,7 @@ jobs:
             "$SKETCH"
           ls -la build
 
-      - name: Sla ihop till en enda flashbar fil
+      - name: Sla ihop till flashbara delar
         run: |
           python3 -m pip install --quiet esptool
 
@@ -67,21 +67,47 @@ jobs:
           BOOT_APP0=$(find "$HOME/.arduino15/packages/esp32" -name boot_app0.bin | head -1)
           echo "boot_app0: $BOOT_APP0"
 
-          # Filnamnet innehaller byggets id. Ett fast namn som gmate-merged.bin
-          # ar samma adress for evigt, och en webblasare eller ett mellanlager
-          # som en gang hamtat den filen har ingen anledning att hamta om den -
-          # da flashas gammal firmware fran cachen hur mycket vi an bygger om.
-          # Med ett nytt namn per bygge kan det inte intraffa.
+          # Tva delar, inte en. En enda sammanhangande fil fran adress 0 skulle
+          # tacka aven nvs-omradet 0x9000-0xE000, och eftersom flashningen
+          # raderar varje sektor den skriver skulle installningar, tara och
+          # inlard framatriktning forsvinna vid varje omflashning. Delarna
+          # lamnar ett hal precis dar nvs ligger.
+          #
+          # Filnamnen innehaller byggets id. Ett fast namn ar samma adress for
+          # evigt, och en webblasare som en gang hamtat filen har ingen
+          # anledning att hamta om den - da flashas gammal firmware ur cachen
+          # hur mycket vi an bygger om.
+          VERSION="${GITHUB_SHA::7}"
           mkdir -p site
+
+          # Del A: 0x0 bootloader + 0x8000 partitionstabell. Slutar vid 0x8C00.
           python3 -m esptool --chip esp32s3 merge_bin \
-            -o "site/gmate-${GITHUB_SHA::7}.bin" \
+            -o "site/gmate-$VERSION-a.bin" \
             --flash_mode dio \
             --flash_freq 80m \
             --flash_size 16MB \
             0x0 build/Gmate.ino.bootloader.bin \
-            0x8000 build/Gmate.ino.partitions.bin \
+            0x8000 build/Gmate.ino.partitions.bin
+
+          # Del B: 0xe000 boot-valjare + 0x10000 sjalva appen.
+          python3 -m esptool --chip esp32s3 merge_bin \
+            -o "site/gmate-$VERSION-b.bin" \
+            --target-offset 0xe000 \
+            --flash_mode dio \
+            --flash_freq 80m \
+            --flash_size 16MB \
             0xe000 "$BOOT_APP0" \
             0x10000 build/Gmate.ino.bin
+
+          # Halet maste finnas. Vaxer del A in i 0x9000 ar nvs inte langre
+          # skyddat, och det ska falla bygget - inte upptackas av en anvandare
+          # som undrar vart taran tog vagen.
+          SIZE_A=$(stat -c%s "site/gmate-$VERSION-a.bin")
+          echo "del A: $SIZE_A byte, nvs borjar vid 36864"
+          if [ "$SIZE_A" -gt 36864 ]; then
+            echo "FEL: del A vaxer in i nvs-omradet" >&2
+            exit 1
+          fi
 
           ls -la site
 
@@ -101,7 +127,8 @@ jobs:
             echo "FEL: platshallare kvar i den publicerade sidan" >&2
             exit 1
           fi
-          test -f "site/gmate-$VERSION.bin"
+          test -f "site/gmate-$VERSION-a.bin"
+          test -f "site/gmate-$VERSION-b.bin"
 
       - name: Spara firmware som nedladdningsbar artefakt
         # Ett fullt lagringsutrymme for artefakter ar ett kontoproblem, inte
