@@ -333,6 +333,11 @@ void drawSettings(const AppSettings &cfg) {
   gfx->fillScreen(C_BG);
   printAt(16, 14, 3, C_TEXT, "INSTÄLLNINGAR");
 
+  // Tidpunkten firmware byggdes, satt av kompilatorn. Det ar det enda stallet
+  // dar det gar att se vilken version som faktiskt sitter pa kortet - utan den
+  // ar en misslyckad omflashning omojlig att skilja fran en lyckad.
+  printRight(434, 24, 1, C_DIM, __DATE__ " " __TIME__);
+
   const char *labels[4] = {"Loggfrekvens", "Mätområde G", "Mätområde gyro",
                            "Släck skärm"};
 

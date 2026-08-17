@@ -30,6 +30,11 @@ löpande besked om hur mycket som loggats och hur länge utrymmet räcker.
 3. Klicka på **Installera Gmate på kortet** och välj kortets port i listan.
 4. Vänta tills det står att det är klart.
 
+Det finns **bara en mjukvara** – du väljer ingenting. Sidan installerar alltid
+det senaste som byggts, och under knappen står vilken version det är och när den
+byggdes. Vilken version som sitter på kortet ser du i **MENY**, uppe till höger.
+Stämmer de två överens gick flashningen igenom.
+
 Hittar datorn ingen port: håll inne **BOOT**, tryck och släpp **RESET**, släpp
 sedan BOOT. Då lägger sig kortet i ett läge där det alltid går att flasha.
 
@@ -349,6 +354,7 @@ med en USB-mätare på din egen uppsättning innan du litar på en tvåveckorsk�
 | Knapptryck hamnar fel på skärmen | Öppna `firmware/Gmate/config.h` och sätt `TOUCH_FLIP_X` eller `TOUCH_FLIP_Y` till `1` |
 | Datorn hittar ingen port | Håll **BOOT**, tryck **RESET**, släpp BOOT. Prova en annan kabel |
 | Loggningen stannade av sig själv | Kortet blev fullt. Den stoppar med flit i stället för att skriva sönder filen |
+| Kortet beter sig som den gamla versionen efter flashning | Jämför versionsraden på flashsidan med den i **MENY**. Visar sidan fel version har webbläsaren sparat en gammal kopia av sidan – ladda om med `Ctrl`+`F5` (`Cmd`+`Shift`+`R` på Mac) |
 
 ---
 

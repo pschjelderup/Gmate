@@ -1,12 +1,13 @@
 {
   "name": "Gmate g-kraftslogger",
   "version": "__VERSION__",
+  "built": "__BUILT__",
   "home_assistant_domain": "",
   "new_install_prompt_erase": true,
   "builds": [
     {
       "chipFamily": "ESP32-S3",
-      "parts": [{ "path": "gmate-merged.bin", "offset": 0 }]
+      "parts": [{ "path": "gmate-__VERSION__.bin", "offset": 0 }]
     }
   ]
 }

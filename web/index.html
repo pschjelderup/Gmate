@@ -71,6 +71,17 @@
       .unsupported {
         color: #ffb84d;
       }
+      .version {
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        color: var(--dim);
+      }
+      .version a {
+        color: var(--accent);
+      }
+      .version.fel {
+        color: #ffb84d;
+      }
     </style>
   </head>
   <body>
@@ -92,6 +103,8 @@
             Sidan måste öppnas över https för att få prata med kortet.
           </span>
         </esp-web-install-button>
+
+        <p class="version" id="version">Hämtar versionsuppgifter …</p>
       </div>
 
       <div class="card">
@@ -121,6 +134,57 @@
           kortet och kan öppnas direkt i Excel.
         </p>
       </div>
+
+      <div class="card">
+        <h2>Får du en gammal version?</h2>
+        <p class="note">
+          Kontrollera versionsraden vid knappen och jämför med senaste
+          ändringen i
+          <a href="https://github.com/pschjelderup/Gmate/commits/main"
+            >förrådet</a
+          >. Stämmer den inte har din webbläsare sparat en gammal kopia av
+          sidan: ladda om med <code>Ctrl</code>+<code>F5</code>
+          (<code>Cmd</code>+<code>Shift</code>+<code>R</code> på Mac). Själva
+          firmwarefilen byter namn vid varje bygge och kan aldrig komma från
+          cachen.
+        </p>
+        <p class="note">
+          Vilken version som sitter på kortet ser du under <strong>MENY</strong>
+          uppe till höger på skärmen.
+        </p>
+      </div>
     </main>
+
+    <script>
+      // Manifestet hamtas alltid pa nytt. Utan det kan webblasaren laser ett
+      // gammalt manifest ur sin cache och installera en gammal firmware, hur
+      // manga ganger vi an bygger om.
+      const fraskt = "manifest.json?t=" + Date.now();
+      document.querySelector("esp-web-install-button").manifest = fraskt;
+
+      // Samma manifest lases en gang till for att visa vad som faktiskt
+      // kommer att installeras. Utan den raden gar det inte att se skillnad
+      // pa ny och gammal firmware forran kortet ar flashat.
+      fetch(fraskt, { cache: "no-store" })
+        .then((r) => {
+          if (!r.ok) throw new Error(r.status);
+          return r.json();
+        })
+        .then((m) => {
+          const fil = m.builds[0].parts[0].path;
+          const rad = document.getElementById("version");
+          rad.innerHTML = "";
+          rad.append("Installerar version " + m.version + " · byggd " + m.built + " · ");
+          const lank = document.createElement("a");
+          lank.href = fil;
+          lank.textContent = fil;
+          rad.append(lank);
+        })
+        .catch(() => {
+          const rad = document.getElementById("version");
+          rad.className = "version fel";
+          rad.textContent = "Kunde inte hämta versionsuppgifterna.";
+        });
+    </script>
   </body>
 </html>
