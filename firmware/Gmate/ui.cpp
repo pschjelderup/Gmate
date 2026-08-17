@@ -191,7 +191,7 @@ void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
   gfx->fillScreen(C_BG);
 
   // ------------------------------------------------------------ rubrik ----
-  printAt(16, 14, 3, C_TEXT, "G-LOGGER");
+  printAt(16, 14, 3, C_TEXT, "G-SPOTTER");
   // Klocksträngen ar "2026-08-16 18:30:05"; vi visar bara tiden.
   if (clock.length() >= 19) {
     printRight(434, 18, 2, C_DIM, clock.c_str() + 11);
