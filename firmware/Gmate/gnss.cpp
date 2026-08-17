@@ -13,6 +13,8 @@ bool g_present = false;
 bool g_timeValid = false;
 GnssFix g_fix = {};
 uint32_t g_lastPollMs = 0;
+uint32_t g_polls = 0;
+uint32_t g_packets = 0;
 
 uint16_t g_year = 0;
 uint8_t g_month = 0, g_day = 0, g_hour = 0, g_minute = 0, g_second = 0;
@@ -59,7 +61,9 @@ void poll() {
 
   // Falskt betyder bara att inget nytt kommit sedan sist. Da behaller vi de
   // varden vi redan har.
+  g_polls++;
   if (!gps.getPVT()) return;
+  g_packets++;
 
   g_fix.fixType = gps.getFixType();
   g_fix.sats = gps.getSIV();
@@ -82,6 +86,16 @@ void poll() {
 }
 
 GnssFix fix() { return g_fix; }
+
+GnssDebug debug() {
+  GnssDebug d;
+  d.present = g_present;
+  d.polls = g_polls;
+  d.packets = g_packets;
+  d.fixType = g_fix.fixType;
+  d.sats = g_fix.sats;
+  return d;
+}
 
 bool timeValid() { return g_timeValid; }
 

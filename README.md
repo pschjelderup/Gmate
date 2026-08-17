@@ -163,8 +163,11 @@ Den lila ligger kvar så att du ser hur hårt det blev även när bubblan hunnit
 tillbaka till mitten.
 
 **Poängen** uppe till höger är 0–100 och lever hela tiden. Den sjunker när du
-går över mjuka gränsen och återhämtar sig med drygt en poäng per sekund mjuk
-körning.
+går över mjuka gränsen och klättrar tillbaka när du kör mjukt. **Poängfönstret**
+i [GRÄNSER](#gränser--ställ-in-medan-du-kör) bestämmer hur snabbt: en
+sammanhängande mjuk sträcka lika lång som fönstret tar poängen från noll
+tillbaka till hundra. Kort fönster ger en siffra som säger *hur du kör just nu*;
+långt fönster en som säger *hur hela resan gått*.
 Under siffran står ett omdöme: UTMÄRKT, BRA, OK, HACKIGT eller HÅRT.
 
 **Räknarna** längst ned visar antal hårda moment sedan du nollställde, uppdelat
@@ -215,6 +218,7 @@ ECODRIVE-skärmen berättar var den ligger:
 | Raden säger | Betyder |
 |---|---|
 | `Riktning: kräver GPS` | Ingen mottagare inkopplad – riktningen går inte att lära sig |
+| `Riktning: väntar på GPS-fix` | Mottagaren svarar men har ingen position ännu. Att köra hjälper inte förrän den fått fix |
 | `Riktning: kör, gasa och bromsa` | GPS finns, men inlärningen har inte börjat |
 | `Riktning: lär sig 40%` | Pågår. Kör normalt, den blir bättre för varje inbromsning |
 | `Riktning: inlärd` | Klar. Broms = bubblan nedåt, högerkurva = bubblan åt vänster |
@@ -261,6 +265,7 @@ som hamnar i loggfilen, så det finns ingen fil som kan bli inkonsekvent.
 | Hård gräns | Här räknas det som ett hårt moment | 0,30 g |
 | Ytterring | Vad bubblans ytterkant motsvarar | 0,40 g |
 | Stränghet | Poäng som dras per g och sekund över mjuka gränsen | 40 |
+| Poängfönster | Hur långt tillbaka poängen speglar | 2 min |
 
 Uppe till höger står det levande värdet medan du skruvar, så du ser vad du
 faktiskt kör med i stället för att gissa. Valet sparas och överlever

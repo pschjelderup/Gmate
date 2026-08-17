@@ -18,7 +18,20 @@ struct GnssFix {
   float courseDeg;   // kurs over grund, 0-360 grader
 };
 
+// Rasiffror for felsokning over serieporten. Utan dem gar det inte att skilja
+// "modulen svarar inte" fran "modulen svarar men ser inga satelliter", och det
+// ar tva helt olika fel.
+struct GnssDebug {
+  bool present;
+  uint32_t polls;      // antal forsok att lasa av
+  uint32_t packets;    // antal mottagna positionspaket
+  uint8_t fixType;
+  uint8_t sats;
+};
+
 namespace gnss {
+
+GnssDebug debug();
 
 // Letar efter en mottagare pa i2c. Returnerar false om ingen finns, vilket
 // inte ar ett fel utan bara betyder att kortet kor utan GPS.

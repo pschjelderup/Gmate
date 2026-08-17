@@ -64,6 +64,9 @@ float g_hardG = ECO_HARD_G;
 float g_clearG = ECO_CLEAR_G;
 float g_bubbleG = ECO_BUBBLE_FULL_G;
 float g_penalty = ECO_PENALTY_PER_G_S;
+// Poang per sekund tillbaka mot hundra. Harleds ur fonstret: en mjuk stracka
+// lika lang som fonstret ska racka hela vagen fran noll.
+float g_recovery = 100.0f / 120.0f;
 
 // Taran utfors av avlasningstraden, inte av den som trycker pa knappen. Annars
 // skulle lodlinjen skrivas fran tva hall samtidigt, mitt i en filtrering.
@@ -191,7 +194,8 @@ void begin() {
   unlock();
 }
 
-void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs) {
+void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs,
+               uint16_t windowS) {
   lock();
   g_softG = softG;
   // Den harda gransen maste ligga over den mjuka, annars skulle ett varde
@@ -202,6 +206,7 @@ void setLimits(float softG, float hardG, float bubbleG, float penaltyPerGs) {
   g_clearG = g_softG + (g_hardG - g_softG) * 0.67f;
   g_bubbleG = bubbleG;
   g_penalty = penaltyPerGs;
+  g_recovery = 100.0f / (windowS > 0 ? (float)windowS : 120.0f);
   g_status.softG = g_softG;
   g_status.hardG = g_hardG;
   g_status.bubbleG = g_bubbleG;
@@ -477,12 +482,13 @@ void tick(const Sample &s) {
   lock();
   const float softG = g_softG, hardG = g_hardG, clearG = g_clearG;
   const float penalty = g_penalty;
+  const float recovery = g_recovery;
   unlock();
 
   if (magG > softG) {
     g_score -= (magG - softG) * penalty * dt;
   } else {
-    g_score += ECO_RECOVERY_PER_S * dt;
+    g_score += recovery * dt;
   }
   if (g_score < 0) g_score = 0;
   if (g_score > 100.0f) g_score = 100.0f;
@@ -521,7 +527,7 @@ void tick(const Sample &s) {
   g_status.gpsClassify = g_haveSpeed;
   g_status.forwardKnown = oriented;
   g_status.forwardQuality = g_fwdQuality;
-  g_status.forwardNeedsGnss = !gnss::present();
+  g_status.forwardNeedsGnss = !g_haveSpeed;
   g_status.hardAccel += addAccel;
   g_status.hardBrake += addBrake;
   g_status.hardTurn += addTurn;

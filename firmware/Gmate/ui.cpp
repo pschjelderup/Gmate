@@ -176,6 +176,21 @@ const Rect kBtnEcoBack = {302, 528, 132, 56};
 Rect settingsMinus(uint8_t row) { return Rect{228, (int16_t)(88 + row * 92), 58, 58}; }
 Rect settingsPlus(uint8_t row) { return Rect{376, (int16_t)(88 + row * 92), 58, 58}; }
 
+// Fem rader mellan y=88 och KLAR-knappen vid y=512: 84 pixlars delning och 70
+// pixlars radhojd ger sista raden slut vid 494.
+namespace {
+const int16_t kEcoRowTop = 88;
+const int16_t kEcoRowPitch = 84;
+const int16_t kEcoRowH = 70;
+int16_t ecoRowY(uint8_t row) { return kEcoRowTop + row * kEcoRowPitch; }
+}  // namespace
+Rect ecoMinus(uint8_t row) {
+  return Rect{228, (int16_t)(ecoRowY(row) + 6), 58, 58};
+}
+Rect ecoPlus(uint8_t row) {
+  return Rect{376, (int16_t)(ecoRowY(row) + 6), 58, 58};
+}
+
 void begin(Arduino_Canvas *canvas) { gfx = canvas; }
 
 void drawMain(const Sample &s, const LoggerStatus &st, uint64_t secondsLeft,
@@ -529,8 +544,12 @@ void drawEco(const EcoStatus &e) {
     snprintf(buf, sizeof(buf), "Riktning: lär sig %d%%",
              (int)(e.forwardQuality * 100.0f + 0.5f));
     printCentered(225, 494, 2, C_WARN, buf);
-  } else if (e.forwardNeedsGnss) {
+  } else if (!gnss::present()) {
     printCentered(225, 494, 2, C_DIM, "Riktning: kräver GPS");
+  } else if (e.forwardNeedsGnss) {
+    // Modulen svarar men har ingen position. Att da uppmana till korning vore
+    // att be om nagot som inte kan ge resultat.
+    printCentered(225, 494, 2, C_WARN, "Riktning: väntar på GPS-fix");
   } else {
     printCentered(225, 494, 2, C_DIM, "Riktning: kör, gasa och bromsa");
   }
@@ -554,40 +573,44 @@ void drawEcoLimits(const AppSettings &cfg, const EcoStatus &e) {
   // blindo - hela poangen med att menyn nas harifran ar att man ser vad man
   // faktiskt kor med medan man skruvar.
   snprintf(buf, sizeof(buf), "just nu %.2f g", e.magG);
-  printRight(434, 22, 2, e.magG >= e.hardG ? C_RED
-                         : e.magG >= e.softG ? C_WARN
-                                             : C_GREEN,
+  printRight(434, 22, 2,
+             e.magG >= e.hardG ? C_RED : e.magG >= e.softG ? C_WARN : C_GREEN,
              buf);
 
   // Etiketterna hålls korta for att inte na in under minusknappen vid x=228.
   // Forklaringen far en egen, mindre rad under.
-  const char *labels[4] = {"Mjuk gräns", "Hård gräns", "Ytterring",
-                           "Stränghet"};
-  const char *hints[4] = {"börjar kosta poäng", "räknas som hårt moment",
-                          "bubblans ytterkant", "poäng per g och sekund"};
+  const char *labels[5] = {"Mjuk gräns", "Hård gräns", "Ytterring",
+                           "Stränghet", "Poängfönster"};
+  const char *hints[5] = {"börjar kosta poäng", "räknas som hårt moment",
+                          "bubblans ytterkant", "poäng per g och sekund",
+                          "tid tillbaka till 100"};
 
-  char values[4][24];
+  char values[5][24];
   snprintf(values[0], sizeof(values[0]), "%.2f g", kEcoSoft[cfg.ecoSoftIdx]);
   snprintf(values[1], sizeof(values[1]), "%.2f g", kEcoHard[cfg.ecoHardIdx]);
   snprintf(values[2], sizeof(values[2]), "%.2f g",
            kEcoBubble[cfg.ecoBubbleIdx]);
   snprintf(values[3], sizeof(values[3]), "%.0f",
            kEcoPenalty[cfg.ecoPenaltyIdx]);
+  const uint16_t win = kEcoWindowS[cfg.ecoWindowIdx];
+  if (win < 60) {
+    snprintf(values[4], sizeof(values[4]), "%u s", (unsigned)win);
+  } else {
+    snprintf(values[4], sizeof(values[4]), "%u min", (unsigned)(win / 60));
+  }
 
-  for (uint8_t row = 0; row < 4; row++) {
-    const int16_t y = 88 + row * 92;
-    const Rect panel = {16, y, 418, 72};
+  for (uint8_t row = 0; row < 5; row++) {
+    const int16_t y = ecoRowY(row);
+    const Rect panel = {16, y, 418, kEcoRowH};
     drawPanel(panel, C_PANEL);
 
-    printAt(32, y + 14, 2, C_TEXT, labels[row]);
-    printAt(32, y + 42, 1, C_DIM, hints[row]);
+    printAt(32, y + 12, 2, C_TEXT, labels[row]);
+    printAt(32, y + 38, 1, C_DIM, hints[row]);
 
-    const Rect minus = settingsMinus(row);
-    const Rect plus = settingsPlus(row);
-    drawButton(minus, C_ACCENT, "-", 3, C_BG);
-    drawButton(plus, C_ACCENT, "+", 3, C_BG);
+    drawButton(ecoMinus(row), C_ACCENT, "-", 3, C_BG);
+    drawButton(ecoPlus(row), C_ACCENT, "+", 3, C_BG);
 
-    printCentered(331, y + 26, 3, C_TEXT, values[row]);
+    printCentered(331, y + 20, 3, C_TEXT, values[row]);
   }
 
   drawButton(kBtnBack, C_GREEN, "KLAR", 4, C_TEXT);

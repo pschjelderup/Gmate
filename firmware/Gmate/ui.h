@@ -22,6 +22,7 @@ struct AppSettings {
   uint8_t ecoHardIdx;
   uint8_t ecoBubbleIdx;
   uint8_t ecoPenaltyIdx;
+  uint8_t ecoWindowIdx;
 };
 
 enum Screen {
@@ -57,6 +58,12 @@ extern const Rect kBtnEcoBack;
 // Knappytor i installningsmenyn. Rad 0-3, minus och plus.
 Rect settingsMinus(uint8_t row);
 Rect settingsPlus(uint8_t row);
+
+// Gransmenyn har fem rader och behover darfor tatare radavstand an
+// installningsmenyns fyra. Egna funktioner, sa att den ena inte drar med sig
+// den andra.
+Rect ecoMinus(uint8_t row);
+Rect ecoPlus(uint8_t row);
 extern const Rect kBtnTare;
 extern const Rect kBtnBack;
 
