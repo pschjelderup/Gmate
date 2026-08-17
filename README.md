@@ -175,6 +175,11 @@ Ringarna i bubblan betyder tre olika saker:
 Den lila ligger kvar så att du ser hur hårt det blev även när bubblan hunnit
 tillbaka till mitten.
 
+**Farten** uppe till vänster är lika stor som poängen och sitter på motsatt
+sida, så att båda går att uppfatta i ögonvrån utan att flytta blicken två
+gånger. Den kommer från GPS:en, inte från bilen – utan fix står det `--`, inte
+noll, eftersom en nolla hade sett ut som en mätning och betytt "du står stilla".
+
 **Poängen** uppe till höger är 0–100 och lever hela tiden. Den sjunker när du
 går över mjuka gränsen och klättrar tillbaka när du kör mjukt. **Poängfönstret**
 i [GRÄNSER](#gränser--ställ-in-medan-du-kör) bestämmer hur snabbt: en

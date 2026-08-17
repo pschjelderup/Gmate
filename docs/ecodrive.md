@@ -164,6 +164,21 @@ erbjuder.
 
 ---
 
+## Farten på skärmen
+
+Hastigheten visas uppe till vänster, i samma storlek som poängen och på motsatt
+sida. Skälet är att de två ska gå att läsa i ett ögonkast: sitter de på samma
+sida måste blicken flytta sig två gånger.
+
+Siffran är **högerställd**. Vänsterställd hoppar den i sidled när farten går
+från 99 till 100, och en siffra som rör sig drar till sig blicken från vägen.
+
+Utan fix står det `--`, inte `0`. En nolla är ett giltigt mätvärde och hade
+betytt "du står stilla".
+
+Farten kommer från GPS:en, inte från bilen. Den är därför oberoende av
+växellåda och hjuldimension, men försvinner i tunnlar.
+
 ## Gas, broms och kurva
 
 Uppdelningen görs på **GPS-farten**, inte på accelerometerns axlar, just för att
