@@ -452,6 +452,24 @@ void drawEco(const EcoStatus &e) {
   printRight(434, 8, 6, scoreColor, buf);
   printRight(434, 56, 2, C_DIM, grade);
 
+  // ----------------------------------------------------------------- fart --
+  // Lika stor som poangen och pa motsatt sida, sa att bada gar att lasa i
+  // ogonvran utan att flytta blicken tva ganger. Siffran ar hogerstalld: annars
+  // hoppar den i sidled nar farten gar fran 99 till 100.
+  const GnssFix fix = gnss::fix();
+  if (gnss::present() && fix.valid) {
+    int kmh = (int)(fix.speedKmh + 0.5f);
+    if (kmh < 0) kmh = 0;
+    if (kmh > 999) kmh = 999;
+    snprintf(buf, sizeof(buf), "%d", kmh);
+    printRight(124, 44, 6, C_TEXT, buf);
+  } else {
+    // Utan fix finns ingen fart att visa. Streck sager det; en nolla hade sett
+    // ut som en matning och betytt "du star stilla".
+    printRight(124, 44, 6, RGB565(60, 70, 88), "--");
+  }
+  printAt(132, 74, 2, C_DIM, "km/h");
+
   // -------------------------------------------------------------- bubblan --
   // En vattenpassbubbla, fast tvarto: den ska sta still i mitten. Ju hardare
   // du kor, desto langre ut vandrar den. Ringarna ar 0,1 g var.

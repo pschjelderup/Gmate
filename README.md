@@ -155,7 +155,7 @@ med enbart rörelsesensorn, utan att veta någonting om motorn.
 
 **Bubblan** är ett vattenpass baklänges: den ska stå still i mitten. Ju hårdare
 du kör, desto längre ut vandrar den. Två av ringarna är dina gränser – den
-gröna är den mjuka, den orange den hårda – och de flyttar sig när du ändrar dem
+gröna är den mjuka, den röda den hårda – och de flyttar sig när du ändrar dem
 i [GRÄNSER](#gränser--ställ-in-medan-du-kör). Färgen följer med:
 
 | Färg | Betyder |
@@ -174,6 +174,11 @@ Ringarna i bubblan betyder tre olika saker:
 
 Den lila ligger kvar så att du ser hur hårt det blev även när bubblan hunnit
 tillbaka till mitten.
+
+**Farten** uppe till vänster är lika stor som poängen och sitter på motsatt
+sida, så att båda går att uppfatta i ögonvrån utan att flytta blicken två
+gånger. Den kommer från GPS:en, inte från bilen – utan fix står det `--`, inte
+noll, eftersom en nolla hade sett ut som en mätning och betytt "du står stilla".
 
 **Poängen** uppe till höger är 0–100 och lever hela tiden. Den sjunker när du
 går över mjuka gränsen och klättrar tillbaka när du kör mjukt. **Poängfönstret**
@@ -509,3 +514,20 @@ arduino-cli compile \
 Pinnarna i `config.h` är verifierade mot två oberoende källor: Waveshares egen
 Arduino-kortdefinition och CircuitPythons kortdefinition för samma kort. Båda
 anger identiska pinnar.
+
+### Hur och varför
+
+Den här filen beskriver hur kortet *används*. Hur det är byggt, och varför det
+är byggt så, står här:
+
+| Fil | Innehåll |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Orientering: var saker ligger, arkitekturregeln, konventioner |
+| [`docs/hardvara.md`](docs/hardvara.md) | Kortet, pinnar och källorna till dem, i2c-karta, kontakter, GPS |
+| [`docs/ecodrive.md`](docs/ecodrive.md) | Hur poäng och bubbla räknas — och buggen som var värd att förstå |
+| [`docs/flashkedjan.md`](docs/flashkedjan.md) | Från commit till kort, och de två fällorna på vägen |
+| [`docs/plan-uppkoppling.md`](docs/plan-uppkoppling.md) | Planerad WiFi-uppladdning. Inte byggd |
+
+I `.claude/skills/` ligger tre återkommande arbetsmoment nedskrivna: att släppa
+en version, att felsöka GPS:en ur serieloggen, och att räkna ut skärmlayout
+innan något ritas.
