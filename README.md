@@ -19,6 +19,7 @@ löpande besked om hur mycket som loggats och hur länge utrymmet räcker.
 | USB-C-kabel | Måste klara **data**. Många kablar är rena laddkablar och fungerar inte |
 | Strömkälla | Bara för långa loggningar – se [Ström och värme](#ström-och-värme) |
 | u-blox-GPS | **Valfritt.** Ger position, hastighet och exakt klocka – se [GPS](#gps-valfritt) |
+| Qwiic-kabel | Bara om du kopplar in GPS. Passar rakt in, ingen adapter behövs |
 
 ---
 
@@ -421,13 +422,31 @@ Innan mottagaren har fått fix lämnas positionskolumnerna **tomma**. De fylls
 inte med nollor, eftersom 0,0 är en giltig position i Atlanten och hade sett ut
 som riktiga mätvärden.
 
-> ### Kontrollera kontakten innan du kopplar in
->
-> Qwiic-standarden är **GND, 3V3, SDA, SCL**. Waveshare använder samma fysiska
-> kontakt (JST SH 1,0 mm, 4-polig) men jag har inte kunnat verifiera att
-> ordningen är densamma på just det här kortet – deras dokumentation gick inte
-> att nå. **Mät med multimeter eller läs texten på kortet först.** Kopplar du in
-> den bakvänd kan GPS-modulen ta skada.
+### Kabeln passar rakt in
+
+Kontakten märkt **I2C** på kortets undersida har stiftordningen **GND · 3V3 ·
+SDA · SCL**, tryckt i klartext bredvid kontakten (Rev 2.0). Det är exakt
+Qwiic-standardens ordning, och kontakten är samma fysiska typ – JST SH 1,0 mm,
+4-polig.
+
+**En vanlig Qwiic-kabel går alltså direkt mellan korten.** Ingen adapter, ingen
+omkastning, ingen lödning.
+
+| | Gmate-kortet | NEO-M9N |
+|---|---|---|
+| Kontakt | JST SH 1,0 mm 4-pol | Samma |
+| Stiftordning | GND · 3V3 · SDA · SCL | Samma |
+| Spänning | **3,3 V** | 3,3 V |
+| I2C-adress | – | 0x42, som firmware letar efter |
+| Ström | – | ~31 mA |
+
+Porten matar 3,3 V, inte 5 V – vilket är tur, eftersom NEO-M9N-kortet saknar
+regulator och inte tål 5 V.
+
+> Kontakten sitter till vänster om USB-C-uttaget. Bredvid den sitter en likadan
+> märkt **UART** (GND · 3V3 · TXD · RXD) och en märkt **RTC**. Det är bara den
+> som står **I2C** som ska användas – en Qwiic-kabel passar fysiskt i alla tre,
+> men UART-porten lägger sändardata där GPS:en väntar sig klocksignal.
 
 Två saker att veta:
 
